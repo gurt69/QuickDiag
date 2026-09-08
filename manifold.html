@@ -1,0 +1,1895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MANIFOLD — Field Diagnostic Reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --panel:#dbe1e5;
+    --plate:#14181b;
+    --plate-2:#1f2529;
+    --ink:#171b1e;
+    --ink-soft:#4c565d;
+    --paper:#f3f0e7;
+    --low-blue:#1e5f8c;
+    --low-blue-soft:#dce9f1;
+    --high-red:#a5352a;
+    --high-red-soft:#f3ded9;
+    --return-amber:#a86f16;
+    --supply-teal:#1f6e63;
+    --amber:#dc9a2e;
+    --amber-deep:#a86f16;
+    --good:#3f7a4e;
+    --good-soft:#dfeee2;
+    --warn:#a86f16;
+    --warn-soft:#f4e6cd;
+    --bad:#a5352a;
+    --bad-soft:#f3ded9;
+    --line:#aeb8bd;
+    --radius:3px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--panel);color:var(--ink);font-family:'Work Sans', sans-serif;-webkit-font-smoothing:antialiased;}
+  .app{max-width:960px;margin:0 auto;padding-bottom:48px;}
+
+  .nameplate{background:linear-gradient(180deg,var(--plate-2),var(--plate));color:#e9e4d6;padding:22px 20px 18px;border-bottom:4px solid var(--amber);}
+  .nameplate-top{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:6px;}
+  .nameplate h1{font-family:'Oswald',sans-serif;font-weight:700;font-size:30px;letter-spacing:0.04em;margin:0;color:#f4f1e8;}
+  .nameplate .tag{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--amber);letter-spacing:0.03em;}
+  .nameplate p{margin:6px 0 0;font-size:13.5px;color:#b7bdb1;max-width:66ch;line-height:1.5;}
+  .guide-toggle{margin-top:12px;font-family:'Oswald',sans-serif;font-size:11.5px;font-weight:600;letter-spacing:0.05em;background:transparent;border:1px solid var(--amber);color:var(--amber);padding:6px 12px;border-radius:2px;cursor:pointer;}
+  .guide-toggle:hover{background:var(--amber);color:var(--plate);}
+  .guide-toggle.on{background:var(--amber);color:var(--plate);}
+
+  .info-btn{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;border:1px solid #97a1a7;background:#fff;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;line-height:1;cursor:pointer;padding:0;margin-left:5px;vertical-align:1px;}
+  .info-btn:hover, .info-btn.active{background:var(--amber-deep);border-color:var(--amber-deep);color:#fff;}
+  .readout .info-btn{border-color:#5a636a;background:transparent;color:#9aa39e;}
+  .readout .info-btn:hover, .readout .info-btn.active{background:var(--amber);border-color:var(--amber);color:var(--plate);}
+  .info-box{margin-top:6px;padding:8px 10px;background:#fff;border:1px solid var(--line);border-left:3px solid var(--amber-deep);border-radius:2px;font-size:11.5px;line-height:1.5;color:#3a4147;font-family:'Work Sans',sans-serif;}
+  .info-box[hidden]{display:none;}
+  .readout .info-box{background:#252b30;border-color:#3a4147;color:#c8cdc4;}
+
+  .ticket{background:var(--paper);margin:16px 16px 0;border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px 18px;}
+  .ticket-head{font-family:'Oswald',sans-serif;font-size:16px;font-weight:700;letter-spacing:0.06em;color:var(--ink);border-bottom:3px solid var(--amber-deep);padding-bottom:9px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:baseline;}
+  .ticket-head .note{font-family:'Work Sans',sans-serif;font-weight:400;font-size:11px;letter-spacing:0;text-transform:none;color:#8b9298;}
+  .field-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px 14px;}
+  .field-grid.tight{grid-template-columns:repeat(auto-fit,minmax(120px,1fr));}
+  .field label{display:block;font-size:11px;font-weight:600;letter-spacing:0.03em;color:var(--ink-soft);margin-bottom:4px;text-transform:uppercase;}
+  .field select, .field input{width:100%;padding:8px 9px;font-family:'IBM Plex Mono',monospace;font-size:14px;border:1px solid #97a1a7;border-radius:2px;background:#fff;color:var(--ink);}
+  .field select:focus, .field input:focus{outline:2px solid var(--amber-deep);outline-offset:0;}
+  .field .hint{font-size:10.5px;color:#828b8f;margin-top:3px;font-family:'Work Sans',sans-serif;}
+
+  .gauges{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:16px 16px 0;}
+  @media(max-width:640px){.gauges{grid-template-columns:1fr;}}
+  .gauge-panel{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;}
+  .gauge-panel .side-head{padding:10px 16px;font-family:'Oswald',sans-serif;font-weight:600;font-size:13px;letter-spacing:0.07em;color:#fff;display:flex;justify-content:space-between;align-items:center;}
+  .gauge-panel.low .side-head{background:var(--low-blue);}
+  .gauge-panel.high .side-head{background:var(--high-red);}
+  .gauge-panel.ret .side-head{background:var(--return-amber);}
+  .gauge-panel.sup .side-head{background:var(--supply-teal);}
+  .gauge-panel .side-head span.sub{font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:10.5px;opacity:0.85;}
+  .gauge-panel .body{padding:14px 16px 16px;}
+
+  .section-label{font-family:'Oswald',sans-serif;font-size:15px;font-weight:700;letter-spacing:0.05em;color:var(--ink);margin:26px 16px 10px;padding:6px 0 6px 12px;border-left:5px solid var(--amber-deep);display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .section-label.accent-elec{border-left-color:#f1c40f;background:linear-gradient(90deg,rgba(241,196,15,0.14),transparent 60%);}
+  .section-label.accent-air{border-left-color:var(--supply-teal);background:linear-gradient(90deg,rgba(31,110,99,0.12),transparent 60%);}
+  .section-label.accent-refrig{border-left-color:var(--low-blue);background:linear-gradient(90deg,rgba(30,95,140,0.12),transparent 60%);}
+
+  .gauge-panel.elec .side-head{background:#1a1a1a;color:#f1c40f;}
+  .hazard-strip{height:5px;background-image:repeating-linear-gradient(45deg,#1a1a1a,#1a1a1a 8px,#f1c40f 8px,#f1c40f 16px);}
+
+  .cap-readout{margin-top:10px;padding:9px 11px;background:#f6f3e9;border:1px solid var(--line);border-radius:2px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--ink);}
+  .cap-readout .chip{margin-left:8px;}
+  .cap-readout.empty{color:#8b9298;font-style:italic;}
+
+  .cap-panel{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin:16px 16px 0;}
+  .cap-panel .side-head{padding:10px 16px;font-family:'Oswald',sans-serif;font-weight:600;font-size:13px;letter-spacing:0.07em;color:#f1c40f;background:#1a1a1a;}
+  .cap-panel .body{padding:16px;}
+  .dual-rating{display:flex;align-items:center;gap:8px;max-width:180px;}
+  .dual-rating input{text-align:center;}
+  .dual-rating-slash{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:16px;color:var(--ink-soft);}
+  .cap-subhead{font-family:'Oswald',sans-serif;font-weight:600;font-size:12px;letter-spacing:0.05em;color:var(--ink-soft);margin:18px 0 8px;padding-top:14px;border-top:1px solid var(--line);}
+  .cap-subhead:first-of-type{padding-top:0;border-top:none;}
+  .cap-subhead .sub{font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:10px;color:#8b9298;margin-left:6px;}
+
+  .scan-btn{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;background:#1a1a1a;color:#f1c40f;border:1px solid #1a1a1a;border-radius:2px;padding:5px 10px;cursor:pointer;letter-spacing:0.02em;}
+
+  .joblink-scan-row{margin:20px 16px 0;background:var(--paper);border:1px solid var(--line);border-left:5px solid var(--low-blue);border-radius:var(--radius);padding:12px 14px;}
+  .joblink-btn{background:var(--low-blue);color:#fff;border-color:var(--low-blue);padding:8px 14px;font-size:12px;}
+  .joblink-btn:hover{background:#164a6d;}
+  .joblink-scan-row .hint{margin-top:8px;}
+
+  .weather-btn{margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;background:#fff;color:var(--low-blue);border:1px solid var(--low-blue);border-radius:2px;padding:5px 9px;cursor:pointer;width:100%;}
+  .weather-btn:hover{background:var(--low-blue-soft);}
+  .weather-status{font-size:10px;color:var(--ink-soft);margin-top:4px;line-height:1.4;font-family:'Work Sans',sans-serif;}
+  .scan-btn:hover{background:#2b2b2b;}
+  .scan-panel{display:none;position:fixed;inset:0;background:rgba(10,12,13,0.88);z-index:50;align-items:center;justify-content:center;padding:20px;}
+  .scan-panel.open{display:flex;}
+  .scan-panel-inner{background:var(--paper);border-radius:var(--radius);max-width:480px;width:100%;max-height:90vh;overflow-y:auto;padding:16px;}
+  .scan-panel-inner img{width:100%;border-radius:2px;border:1px solid var(--line);margin-bottom:10px;}
+  .scan-status{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);margin-bottom:10px;}
+  .scan-raw{font-family:'IBM Plex Mono',monospace;font-size:10.5px;line-height:1.5;background:#fff;border:1px solid var(--line);border-radius:2px;padding:8px 10px;max-height:140px;overflow-y:auto;white-space:pre-wrap;color:#4c565d;margin-bottom:10px;}
+  .scan-close{width:100%;font-family:'Oswald',sans-serif;font-weight:600;font-size:13px;letter-spacing:0.04em;background:var(--amber-deep);color:#fff;border:none;border-radius:2px;padding:9px;cursor:pointer;}
+  .field input.scanned{border-color:var(--good);background:var(--good-soft);}
+
+  .confirm-row{margin:22px 16px 0;}
+  .confirm-btn{width:100%;font-family:'Oswald',sans-serif;font-weight:700;font-size:15px;letter-spacing:0.05em;background:var(--amber);color:var(--plate);border:none;border-radius:var(--radius);padding:14px;cursor:pointer;}
+  .confirm-btn:hover{background:var(--amber-deep);color:#fff;}
+  .confirm-btn.stale{background:var(--amber-deep);color:#fff;}
+  .stale-note{margin-top:8px;font-size:12px;color:#5e4009;background:var(--warn-soft);border:1px solid #d9bb7a;border-radius:2px;padding:8px 11px;line-height:1.5;}
+
+  .readouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:8px 16px 0;}
+  @media(max-width:760px){.readouts{grid-template-columns:1fr 1fr;}}
+  .readout{background:var(--plate);border-radius:var(--radius);padding:13px 16px;color:#e9e4d6;}
+  .readout .rlabel{font-family:'Oswald',sans-serif;font-size:10.5px;letter-spacing:0.08em;color:#9aa39e;margin-bottom:2px;}
+  .readout .rvalue{font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;line-height:1.15;}
+  .readout .rmeta{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#9aa39e;margin-top:4px;}
+  .chip{display:inline-block;font-family:'Oswald',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.05em;padding:2px 7px;border-radius:2px;margin-left:6px;vertical-align:2px;}
+  .chip.normal{background:var(--good-soft);color:var(--good);}
+  .chip.low{background:var(--low-blue-soft);color:var(--low-blue);}
+  .chip.high{background:var(--high-red-soft);color:var(--high-red);}
+  .chip.na{background:#3a4147;color:#9aa39e;}
+
+  .diagnosis{margin:20px 16px 0;}
+  .diagnosis-head{font-family:'Oswald',sans-serif;font-size:16px;font-weight:700;letter-spacing:0.05em;color:var(--ink);padding:6px 0 6px 12px;border-left:5px solid var(--amber-deep);display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .diagnosis-sub{font-size:11.5px;color:var(--ink-soft);padding:0 2px 10px;line-height:1.5;}
+  .empty-state{background:var(--paper);border:1px dashed var(--line);border-radius:var(--radius);padding:20px 18px;color:var(--ink-soft);font-size:13.5px;line-height:1.5;}
+  .finding{display:flex;gap:12px;align-items:flex-start;background:var(--paper);border:1px solid var(--line);border-left:5px solid var(--amber-deep);border-radius:var(--radius);padding:13px 16px;margin-bottom:10px;}
+  .finding.normal-op{border-left-color:var(--good);}
+  .rank-badge{flex:0 0 auto;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:14px;margin-top:1px;}
+  .rank-badge.high-c{background:var(--bad);color:#fff;}
+  .rank-badge.med-c{background:var(--warn);color:#fff;}
+  .rank-badge.low-c{background:#8b986b;color:#fff;}
+  .rank-badge.norm-c{background:var(--good);color:#fff;}
+  .finding-body{flex:1 1 auto;min-width:0;}
+  .finding-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+
+  .ear-badge{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:3px;font-family:'Oswald',sans-serif;font-weight:700;font-size:11px;margin-right:2px;}
+  .ear-badge.ear-electrical{background:#1a1a1a;color:#f1c40f;}
+  .ear-badge.ear-airflow{background:var(--supply-teal);color:#fff;}
+  .ear-badge.ear-refrigerant{background:var(--low-blue);color:#fff;}
+  .ear-note{margin-top:8px;padding:7px 10px;background:#f3ecd9;border:1px solid #d9bb7a;border-radius:2px;font-size:11.5px;line-height:1.5;color:#5e4009;}
+  .ear-legend{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-soft);margin:0 2px 12px;font-family:'Work Sans',sans-serif;}
+  .ear-legend .ear-badge{margin-left:6px;}
+  .ear-legend .ear-badge:first-child{margin-left:0;}
+  .finding-title{font-family:'Oswald',sans-serif;font-weight:600;font-size:15px;color:var(--ink);}
+  .conf{font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;letter-spacing:0.04em;padding:2px 7px;border-radius:2px;white-space:nowrap;}
+  .conf.high-c{background:var(--bad-soft);color:var(--bad);}
+  .conf.med-c{background:var(--warn-soft);color:var(--warn);}
+  .conf.low-c{background:#e3e7cf;color:#5c6b2f;}
+  .conf.norm-c{background:var(--good-soft);color:var(--good);}
+  .finding-detail{font-size:13px;line-height:1.55;color:#2c3236;margin-top:6px;}
+  .finding-detail b{color:var(--ink);}
+  .finding-score{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-soft);margin-top:6px;}
+  .flag-row{display:flex;gap:8px;align-items:flex-start;background:var(--warn-soft);border:1px solid #d9bb7a;border-radius:var(--radius);padding:10px 14px;margin-bottom:10px;font-size:12.5px;color:#5e4009;line-height:1.5;}
+
+  .pkg-tip{grid-column:1/-1;background:var(--warn-soft);border:1px solid #d9bb7a;border-radius:var(--radius);padding:9px 12px;font-size:12px;line-height:1.5;color:#5e4009;}
+
+  .applied-note{font-size:12px;line-height:1.5;margin-top:6px;padding:6px 9px;border-radius:2px;}
+  .applied-note.yes{background:var(--good-soft);color:#2b5636;}
+  .applied-note.no{background:#eef0e2;color:#4c5638;}
+
+  .refine{margin:20px 16px 0;}
+  .q-row{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;}
+  .q-context{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-soft);margin-bottom:4px;}
+  .q-context b{color:var(--ink);}
+  .q-text{font-size:13.5px;line-height:1.45;color:var(--ink);margin-bottom:10px;}
+  .q-buttons{display:flex;gap:8px;}
+  .q-btn{font-family:'Oswald',sans-serif;font-weight:600;font-size:12px;letter-spacing:0.04em;padding:7px 20px;border-radius:2px;border:1px solid #97a1a7;background:#fff;color:var(--ink-soft);cursor:pointer;}
+  .q-btn:hover{border-color:var(--amber-deep);}
+  .q-btn.active-yes{background:var(--good);border-color:var(--good);color:#fff;}
+  .q-btn.active-no{background:#6b7560;border-color:#6b7560;color:#fff;}
+
+  .footer-note{margin:20px 16px 0;font-size:11.5px;color:var(--ink-soft);line-height:1.6;border-top:1px solid var(--line);padding-top:12px;}
+
+  /* ---- Wizard ---- */
+  .wizard{margin:16px 16px 0;}
+  .wizard-progress{margin-bottom:14px;}
+  .wizard-progress-bar{height:6px;background:var(--panel);border:1px solid var(--line);border-radius:4px;overflow:hidden;}
+  .wizard-progress-fill{height:100%;background:var(--amber-deep);width:0%;transition:width 0.2s;}
+  .wizard-progress-label{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);margin-top:6px;text-align:center;}
+  .wizard-card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:22px 18px;min-height:260px;}
+  .wiz-phase-badge{display:inline-block;font-family:'Oswald',sans-serif;font-weight:700;font-size:11px;letter-spacing:0.08em;padding:4px 10px;border-radius:2px;margin-bottom:14px;}
+  .wiz-phase-badge.setup{background:var(--plate);color:#e9e4d6;}
+  .wiz-phase-badge.electrical{background:#1a1a1a;color:#f1c40f;}
+  .wiz-phase-badge.airflow{background:var(--supply-teal);color:#fff;}
+  .wiz-phase-badge.refrigerant{background:var(--low-blue);color:#fff;}
+  .wiz-step-title{font-family:'Oswald',sans-serif;font-weight:700;font-size:20px;color:var(--ink);margin-bottom:6px;}
+  .wiz-step-desc{font-size:13.5px;line-height:1.55;color:#3a4147;margin-bottom:18px;}
+  .wiz-field-slot .field label{font-size:12px;}
+
+  .wiz-group-tag{display:inline-block;font-family:'Oswald',sans-serif;font-weight:700;font-size:12px;letter-spacing:0.07em;padding:5px 11px;border-radius:2px;margin-bottom:12px;}
+  .wiz-group-tag.grp-elec{background:#1a1a1a;color:#f1c40f;}
+  .wiz-group-tag.grp-suction{background:var(--low-blue);color:#fff;}
+  .wiz-group-tag.grp-liquid{background:var(--high-red);color:#fff;}
+  .wiz-group-tag.grp-return{background:var(--return-amber);color:#fff;}
+  .wiz-group-tag.grp-supply{background:var(--supply-teal);color:#fff;}
+  .wiz-field-slot .field select, .wiz-field-slot .field input{font-size:19px;padding:13px 12px;}
+  .wiz-field-slot .field .hint{font-size:11.5px;margin-top:5px;}
+  .wiz-field-slot .info-box{font-size:12.5px;}
+  .wiz-intro-actions{display:flex;flex-direction:column;gap:10px;margin-top:6px;}
+  .wiz-or-manual{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);font-size:12.5px;color:var(--ink-soft);line-height:1.5;text-align:center;}
+  .wiz-select-group{display:flex;flex-direction:column;gap:10px;}
+  .wiz-select-btn{font-family:'Oswald',sans-serif;font-weight:600;font-size:15px;text-align:left;padding:14px 16px;border:2px solid var(--line);border-radius:var(--radius);background:#fff;color:var(--ink);cursor:pointer;}
+  .wiz-select-btn.chosen{border-color:var(--amber-deep);background:var(--warn-soft);}
+
+  .wiz-verdict{display:flex;gap:12px;align-items:flex-start;padding:16px;border-radius:var(--radius);margin-top:4px;}
+  .wiz-verdict-icon{flex:0 0 auto;font-size:22px;line-height:1;}
+  .wiz-verdict-msg{font-size:14px;line-height:1.55;}
+  .wiz-verdict-good{background:var(--good-soft);color:#2b5636;}
+  .wiz-verdict-good .wiz-verdict-icon{color:var(--good);}
+  .wiz-verdict-bad{background:var(--bad-soft);color:#7a2a21;}
+  .wiz-verdict-bad .wiz-verdict-icon{color:var(--bad);}
+  .wiz-verdict-skip{background:var(--panel);color:var(--ink-soft);}
+  .wiz-jump-btn{margin-top:14px;width:100%;font-family:'Oswald',sans-serif;font-weight:700;font-size:13px;letter-spacing:0.03em;padding:12px;border-radius:var(--radius);border:2px solid var(--bad);background:#fff;color:var(--bad);cursor:pointer;}
+  .wiz-jump-btn:hover{background:var(--bad-soft);}
+
+  .wizard-nav{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
+  .wiz-btn{flex:1 1 auto;font-family:'Oswald',sans-serif;font-weight:700;font-size:13px;letter-spacing:0.04em;padding:12px;border-radius:var(--radius);border:none;cursor:pointer;}
+  .wiz-back{background:#fff;border:1px solid #97a1a7;color:var(--ink-soft);flex:0 0 auto;padding:12px 18px;}
+  .wiz-skip-results{background:#fff;border:1px solid #97a1a7;color:var(--ink-soft);font-weight:500;font-size:11.5px;flex:1 1 auto;}
+  .wiz-next{background:var(--amber);color:var(--plate);flex:1 1 auto;}
+  .wiz-next:hover{background:var(--amber-deep);color:#fff;}
+
+  .results-banner{display:flex;gap:10px;margin:16px 16px 0;flex-wrap:wrap;}
+  .results-edit-btn{flex:1 1 auto;font-family:'Oswald',sans-serif;font-weight:600;font-size:12.5px;letter-spacing:0.03em;padding:11px;border-radius:var(--radius);border:1px solid var(--amber-deep);background:#fff;color:var(--amber-deep);cursor:pointer;}
+  .results-edit-btn:hover{background:var(--warn-soft);}
+
+  .wiz-review-list{display:flex;flex-direction:column;gap:2px;max-height:50vh;overflow-y:auto;}
+  .wiz-review-phase{font-family:'Oswald',sans-serif;font-weight:700;font-size:12px;letter-spacing:0.05em;color:var(--ink-soft);margin:12px 0 6px;}
+  .wiz-review-phase:first-child{margin-top:0;}
+  .wiz-review-row{display:flex;justify-content:space-between;align-items:center;padding:9px 10px;border-radius:2px;cursor:pointer;font-size:13px;}
+  .wiz-review-row:hover{background:var(--warn-soft);}
+  .wiz-review-row .rv-label{color:var(--ink-soft);}
+  .wiz-review-row .rv-value{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--ink);}
+  .wiz-review-row .rv-value.empty{color:#b5bbba;font-style:italic;font-weight:400;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="nameplate">
+    <div class="nameplate-top">
+      <h1>MANIFOLD</h1>
+      <span class="tag">FIELD DIAGNOSTIC REFERENCE</span>
+    </div>
+    <p>Punch in the readings straight off your Job Link probes — refrigerant side and air side — and get a ranked list of likely causes with the reasoning behind each.</p>
+    <button type="button" class="guide-toggle" id="guideToggle">Show Field Guide</button>
+  </div>
+
+  <div id="wizard" class="wizard">
+    <div class="wizard-progress">
+      <div class="wizard-progress-bar"><div class="wizard-progress-fill" id="wizProgressFill"></div></div>
+      <div class="wizard-progress-label" id="wizProgressLabel"></div>
+    </div>
+    <div class="wizard-card" id="wizCard"></div>
+    <div class="wizard-nav">
+      <button type="button" class="wiz-btn wiz-back" id="wizBack">← Back</button>
+      <button type="button" class="wiz-btn wiz-skip-results" id="wizSkipResults">Skip to Results</button>
+      <button type="button" class="wiz-btn wiz-next" id="wizNext">Next →</button>
+    </div>
+  </div>
+
+  <div id="legacyInputs" style="display:none;">
+  <div class="ticket">
+    <div class="ticket-head"><span>SYSTEM SETUP</span><span class="note">from the probe kit's app header</span></div>
+    <div class="field-grid">
+      <div class="field">
+        <label for="refrigerant">Refrigerant Type</label>
+        <select id="refrigerant">
+          <option value="R410A">R-410A</option>
+          <option value="R22">R-22</option>
+          <option value="R32">R-32</option>
+          <option value="R454B">R-454B</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="sysType">System Type</label>
+        <select id="sysType">
+          <option value="straightac">Straight AC</option>
+          <option value="heatpump">Heat Pump (cooling mode)</option>
+          <option value="packageunit">Package Unit (Gas Pack)</option>
+        </select>
+      </div>
+      <div id="pkgTip" class="pkg-tip" hidden>📦 Package units have the whole refrigeration circuit — compressor, condenser coil, and evaporator coil — built and charged together in one pre-sized cabinet, so there's no line set length to throw the charge off like there can be on a split system. That said, factory charge still isn't a guarantee: assembly/charging errors and shipping damage do happen. Verify with superheat/subcooling the same as any other system before trusting it.</div>
+      <div class="field">
+        <label for="metering">Metering Device</label>
+        <select id="metering">
+          <option value="txv">TXV / TEV</option>
+          <option value="orifice">Fixed Orifice / Piston</option>
+          <option value="unknown">Not Sure</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="ambient">Outdoor Ambient (°F)</label>
+        <input type="number" id="ambient" placeholder="e.g. 92">
+        <button type="button" class="weather-btn" id="weatherBtn">📍 Use Current Weather</button>
+        <div class="weather-status" id="weatherStatus"></div>
+      </div>
+      <div class="field">
+        <label for="targetSH">Mfr. Target Superheat (°F)</label>
+        <input type="number" id="targetSH" placeholder="default 12">
+      </div>
+      <div class="field">
+        <label for="targetSC">Mfr. Target Subcool (°F)</label>
+        <input type="number" id="targetSC" placeholder="default 10">
+      </div>
+      <div class="field">
+        <label for="targetStatic">Rated Static (in. w.c.)</label>
+        <input type="number" id="targetStatic" step="0.01" placeholder="default 0.50">
+      </div>
+      <div class="field">
+        <label for="voltage">Line Voltage (V)</label>
+        <input type="number" id="voltage" placeholder="measured">
+      </div>
+      <div class="field">
+        <label for="ratedVoltage">Rated Voltage (V)</label>
+        <input type="number" id="ratedVoltage" placeholder="e.g. 230">
+      </div>
+      <div class="field">
+        <label for="capTolerance">Capacitor Tolerance (±%)</label>
+        <input type="number" id="capTolerance" placeholder="default 6">
+      </div>
+    </div>
+  </div>
+
+  <div id="jobLinkScanRow" class="joblink-scan-row">
+    <button type="button" class="scan-btn joblink-btn" id="jobLinkScanBtn">📱 Scan Job Link Screen</button>
+    <div class="hint">Photograph the Refrigerant Side or Air Side screen in the Job Link app — this can fill most of the sections below in one shot. Take one photo per screen.</div>
+  </div>
+  <input type="file" id="jobLinkInput" accept="image/*" style="display:none;">
+
+  <div class="section-label accent-refrig">REFRIGERANT SIDE</div>
+  <div class="gauges">
+    <div class="gauge-panel low">
+      <div class="side-head">SUCTION <span class="sub">VAPOR</span></div>
+      <div class="body">
+        <div class="field-grid tight">
+          <div class="field"><label for="suctionP">Pressure (psig)</label><input type="number" id="suctionP" placeholder="145.5"></div>
+          <div class="field"><label for="suctionT">Temperature (°F)</label><input type="number" id="suctionT" placeholder="line temp"></div>
+          <div class="field"><label for="vaporSat">Vapor Saturation (°F)</label><input type="number" id="vaporSat" placeholder="51.1"></div>
+          <div class="field"><label for="actualSH">Actual Superheat (°F)</label><input type="number" id="actualSH" placeholder="from probe"></div>
+        </div>
+      </div>
+    </div>
+    <div class="gauge-panel high">
+      <div class="side-head">LIQUID <span class="sub">HIGH SIDE</span></div>
+      <div class="body">
+        <div class="field-grid tight">
+          <div class="field"><label for="liquidP">Pressure (psig)</label><input type="number" id="liquidP" placeholder="360.8"></div>
+          <div class="field"><label for="liquidT">Temperature (°F)</label><input type="number" id="liquidT" placeholder="103.9"></div>
+          <div class="field"><label for="liquidSat">Liquid Saturation (°F)</label><input type="number" id="liquidSat" placeholder="108.9"></div>
+          <div class="field"><label for="actualSC">Actual Subcooling (°F)</label><input type="number" id="actualSC" placeholder="from probe"></div>
+          <div class="field"><label for="dischargeP">Discharge Pressure (psig)</label><input type="number" id="dischargeP" placeholder="optional"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-label accent-air">AIR SIDE</div>
+  <div class="gauges">
+    <div class="gauge-panel ret">
+      <div class="side-head">RETURN</div>
+      <div class="body">
+        <div class="field-grid tight">
+          <div class="field"><label for="retDB">Dry Bulb (°F)</label><input type="number" id="retDB" placeholder="74.9"></div>
+          <div class="field"><label for="retWB">Wet Bulb (°F)</label><input type="number" id="retWB" placeholder="65.2"></div>
+          <div class="field"><label for="retRH">Rel. Humidity (%)</label><input type="number" id="retRH" placeholder="59.4"></div>
+          <div class="field"><label for="retDP">Dew Point (°F)</label><input type="number" id="retDP" placeholder="59.8"></div>
+          <div class="field"><label for="retEnth">Enthalpy (Btu/lb)</label><input type="number" id="retEnth" placeholder="30.1"></div>
+        </div>
+      </div>
+    </div>
+    <div class="gauge-panel sup">
+      <div class="side-head">SUPPLY</div>
+      <div class="body">
+        <div class="field-grid tight">
+          <div class="field"><label for="supDB">Dry Bulb (°F)</label><input type="number" id="supDB" placeholder="62.1"></div>
+          <div class="field"><label for="supWB">Wet Bulb (°F)</label><input type="number" id="supWB" placeholder="59.6"></div>
+          <div class="field"><label for="supRH">Rel. Humidity (%)</label><input type="number" id="supRH" placeholder="86.7"></div>
+          <div class="field"><label for="supDP">Dew Point (°F)</label><input type="number" id="supDP" placeholder="58.1"></div>
+          <div class="field"><label for="supEnth">Enthalpy (Btu/lb)</label><input type="number" id="supEnth" placeholder="26.2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-label accent-air">STATIC PRESSURE</div>
+  <div class="gauges">
+    <div class="gauge-panel sup">
+      <div class="side-head">SUPPLY <span class="sub">PLENUM</span></div>
+      <div class="body">
+        <div class="field-grid tight">
+          <div class="field">
+            <label for="supStatic">Static (in. w.c.)</label>
+            <input type="number" id="supStatic" step="0.01" placeholder="e.g. 0.30">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="gauge-panel ret">
+      <div class="side-head">RETURN <span class="sub">PLENUM</span></div>
+      <div class="body">
+        <div class="field-grid tight">
+          <div class="field">
+            <label for="retStatic">Static (in. w.c.)</label>
+            <input type="number" id="retStatic" step="0.01" placeholder="e.g. -0.25">
+            <div class="hint">Enter negative — return side normally reads a vacuum</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-label accent-elec">
+    ELECTRICAL
+    <button type="button" class="scan-btn" id="scanBtn">📷 Scan Data Plate</button>
+  </div>
+  <input type="file" id="plateInput" accept="image/*" capture="environment" style="display:none;">
+  <div id="scanPanel" class="scan-panel">
+    <div class="scan-panel-inner">
+      <img id="plateImg" alt="Data plate photo">
+      <div class="scan-status" id="scanStatus">Reading plate…</div>
+      <div class="scan-raw" id="scanRaw" hidden></div>
+      <button type="button" class="scan-close" id="scanClose">Close</button>
+    </div>
+  </div>
+  <div class="gauges">
+    <div class="gauge-panel elec">
+      <div class="side-head">COMPRESSOR</div>
+      <div class="hazard-strip"></div>
+      <div class="body">
+        <div class="field-grid tight">
+          <div class="field"><label for="compAmp">Amp Draw (A)</label><input type="number" id="compAmp" placeholder="measured"></div>
+          <div class="field"><label for="compRLA">Rated Load Amps — RLA (A)</label><input type="number" id="compRLA" placeholder="data plate"></div>
+        </div>
+      </div>
+    </div>
+    <div class="gauge-panel elec">
+      <div class="side-head">CONDENSER FAN</div>
+      <div class="hazard-strip"></div>
+      <div class="body">
+        <div class="field-grid tight">
+          <div class="field"><label for="fanAmp">Amp Draw (A)</label><input type="number" id="fanAmp" placeholder="measured"></div>
+          <div class="field"><label for="fanFLA">Rated Full Load Amps — FLA (A)</label><input type="number" id="fanFLA" placeholder="data plate"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-label accent-elec">CAPACITOR TEST <span style="font-weight:400;text-transform:none;letter-spacing:0;font-family:'IBM Plex Mono',monospace;font-size:10.5px;">(running, in-circuit)</span></div>
+  <div class="diagnosis-sub" style="margin:0 16px 8px;">Clamp amps and read volts across Common-to-Herm (compressor) or Common-to-Fan, with the system running. This works out microfarads for you — <span style="font-family:'IBM Plex Mono',monospace;">µF = (Amps × 2652) ÷ Volts</span> — you don't need to run the math yourself.</div>
+  <div class="cap-panel">
+    <div class="side-head">DUAL RUN CAPACITOR</div>
+    <div class="hazard-strip"></div>
+    <div class="body">
+      <div class="field">
+        <label for="capCompRated">Capacitor Rating (µF)</label>
+        <div class="dual-rating">
+          <input type="number" id="capCompRated" placeholder="45">
+          <span class="dual-rating-slash">/</span>
+          <input type="number" id="capFanRated" placeholder="5">
+        </div>
+        <div class="hint">Printed right on the capacitor, e.g. "45/5 MFD 370V" — herm (compressor) side / fan side</div>
+      </div>
+
+      <div class="cap-subhead">HERM <span class="sub">COMPRESSOR SIDE</span></div>
+      <div class="field-grid tight">
+        <div class="field"><label for="capCompAmps">Amps (C–Herm)</label><input type="number" id="capCompAmps" step="0.1" placeholder="measured"></div>
+        <div class="field"><label for="capCompVolts">Volts (C–Herm)</label><input type="number" id="capCompVolts" placeholder="measured"></div>
+      </div>
+      <div class="cap-readout" id="capCompReadout"></div>
+
+      <div class="cap-subhead">FAN</div>
+      <div class="field-grid tight">
+        <div class="field"><label for="capFanAmps">Amps (C–Fan)</label><input type="number" id="capFanAmps" step="0.1" placeholder="measured"></div>
+        <div class="field"><label for="capFanVolts">Volts (C–Fan)</label><input type="number" id="capFanVolts" placeholder="measured"></div>
+      </div>
+      <div class="cap-readout" id="capFanReadout"></div>
+    </div>
+  </div>
+
+  <div class="confirm-row" style="display:none;">
+    <button type="button" class="confirm-btn" id="confirmBtn">Confirm &amp; Run Diagnosis</button>
+    <div class="stale-note" id="staleNote" hidden>⚠ Inputs have changed since the last run — press Confirm to update the results below.</div>
+  </div>
+  </div>
+
+  <div id="resultsSection" style="display:none;">
+  <div class="results-banner">
+    <button type="button" class="results-edit-btn" id="reviewBtn">✎ Review &amp; Edit Readings</button>
+    <button type="button" class="results-edit-btn" id="startOverBtn">↺ Start Over</button>
+  </div>
+  <div class="readouts">
+    <div class="readout">
+      <div class="rlabel" id="shLabel">SUPERHEAT</div>
+      <div class="rvalue" id="shValue">— °F<span class="chip na" id="shChip"></span></div>
+      <div class="rmeta" id="shMeta">from probe</div>
+    </div>
+    <div class="readout">
+      <div class="rlabel" id="scLabel">SUBCOOLING</div>
+      <div class="rvalue" id="scValue">— °F<span class="chip na" id="scChip"></span></div>
+      <div class="rmeta" id="scMeta">from probe</div>
+    </div>
+    <div class="readout">
+      <div class="rlabel" id="dtLabel">DELTA T</div>
+      <div class="rvalue" id="dtValue">— °F</div>
+      <div class="rmeta">return DB − supply DB</div>
+    </div>
+    <div class="readout">
+      <div class="rlabel" id="edLabel">ENTHALPY DROP</div>
+      <div class="rvalue" id="edValue">—</div>
+      <div class="rmeta">return − supply, Btu/lb</div>
+    </div>
+    <div class="readout">
+      <div class="rlabel" id="tespLabel">TESP</div>
+      <div class="rvalue" id="tespValue">— in. w.c.<span class="chip na" id="tespChip"></span></div>
+      <div class="rmeta" id="tespMeta">supply static − return static</div>
+    </div>
+  </div>
+
+  <div class="diagnosis">
+    <div class="diagnosis-head">DIAGNOSIS</div>
+    <div class="diagnosis-sub">Ranked by how strongly your readings match each pattern, weighted by EAR — <b>E</b>lectrical, <b>A</b>irflow, <b>R</b>efrigerant, in that order — since electrical faults and bad airflow both throw off refrigerant readings. No system catches every variable, so treat this as where to start looking, not a final call. #1 is the most likely place to check first.</div>
+    <div class="ear-legend"><span class="ear-badge ear-electrical">E</span>Electrical<span class="ear-badge ear-airflow">A</span>Airflow<span class="ear-badge ear-refrigerant">R</span>Refrigerant</div>
+    <div id="diagContent">
+      <div class="empty-state">Enter actual superheat and actual subcooling (plus outdoor ambient) to run the diagnosis. Air side readings sharpen the airflow-related findings.</div>
+    </div>
+  </div>
+
+  <div class="refine" id="refineSection" hidden>
+    <div class="diagnosis-head">SHARPEN THE RANKING<button type="button" class="scan-btn" id="clearAnswers">Clear Answers</button></div>
+    <div class="diagnosis-sub">Quick visual checks tied to what's currently ranked highest — no gauge reading required, just what you can see or hear. Answer what you can; each answer updates the ranking above and shows why, then drops off this list.</div>
+    <div id="refineContent"></div>
+  </div>
+  </div>
+
+  <div class="footer-note">
+    Built around the readings a Job Link–style probe kit already gives you — this tool doesn't calculate superheat, subcooling, or saturation temps itself, it reasons from what your probes report. Reference tool for building diagnostic intuition, not a substitute for manufacturer charging charts or your own field verification. Always confirm target superheat/subcooling against the unit's data plate or install manual, and follow EPA 608 refrigerant handling practices.
+  </div>
+
+</div>
+
+<script>
+// Rough "this is just too high, go look at the coil and airflow" ceiling
+// for liquid-line pressure, per refrigerant — independent of ambient temp,
+// so it still fires even when outdoor ambient wasn't entered.
+const VERY_HIGH_LIQUID_PSIG = { R410A: 500, R22: 300, R32: 520, R454B: 475 };
+
+function num(id){
+  const v = document.getElementById(id).value;
+  return v === '' ? null : parseFloat(v);
+}
+function chipClass(status){
+  if(status==='low') return 'low';
+  if(status==='high') return 'high';
+  if(status==='normal') return 'normal';
+  return 'na';
+}
+
+// ---- Field Guide: plain-language explanations for readings a newer tech
+// might not recognize on sight. Each entry attaches a small "?" button
+// next to the matching label; clicking it expands a short explanation
+// right under that field. The header switch shows/hides all of them at once.
+const FIELD_GUIDE = {
+  refrigerant: 'What refrigerant is in this system — check the equipment nameplate or the line set label. Different refrigerants run at different pressures for the same temperature, so this changes what a "normal" gauge reading looks like.',
+  sysType: 'Straight AC: a standard split system, cooling only, usually paired with a furnace that handles the heat. Heat Pump: same idea but reversible — this tool assumes it\'s running in cooling mode. Package Unit: everything (compressor, both coils, and often a gas furnace) built and charged together in one pre-sized outdoor cabinet, common on roofs and slabs — no line set length to throw the charge off since there\'s no field-run line set. Factory charge still isn\'t a guarantee (assembly errors, shipping damage) — verify with superheat/subcooling like anything else.',
+  metering: 'The part that controls how much liquid refrigerant enters the evaporator. A TXV adjusts on the fly to hold a steady superheat, so subcooling is the more reliable number to charge by. A fixed orifice/piston is a fixed hole with no adjustment, so superheat is the more reliable number to charge by.',
+  ambient: 'The outdoor air temperature right now, measured near the condenser. Head pressure should track ambient — roughly 20–35°F of saturated condensing temp above whatever this reads.',
+  targetSH: 'The superheat this specific unit is designed to run at, usually found on the equipment\'s charging chart or install manual — not a universal number. If you don\'t know it, this tool assumes 12°F as a rough placeholder.',
+  targetSC: 'The subcooling this specific unit is designed to run at, usually printed on the unit\'s data plate or charging chart. If you don\'t know it, this tool assumes 10°F as a rough placeholder.',
+  targetStatic: 'The maximum total external static pressure the equipment is rated for, found on the nameplate — commonly 0.5 in. w.c. on residential systems. This is the ceiling the blower is designed to push against.',
+  suctionP: 'The pressure on the low side of the system, read at the suction (vapor) line with your gauge.',
+  suctionT: 'The actual temperature of the suction line itself, measured with a clamp or strap-on probe a few inches from the compressor.',
+  vaporSat: 'The temperature the refrigerant is boiling at inside the evaporator, based on your suction pressure reading. Your probe kit calculates this from the pressure automatically using the refrigerant\'s pressure/temperature relationship.',
+  actualSH: 'How many degrees hotter the suction line is than the refrigerant\'s boiling point at that pressure. It tells you the vapor has fully boiled off with some margin to spare before reaching the compressor — too little and liquid could reach the compressor, too much usually means the evaporator is starved.',
+  liquidP: 'The pressure on the high side of the system, read at the liquid line with your gauge.',
+  liquidT: 'The actual temperature of the liquid line, measured a few inches from the outdoor unit.',
+  liquidSat: 'The temperature the refrigerant is condensing at inside the condenser, based on your liquid pressure reading — calculated by your probe kit the same way as vapor saturation.',
+  actualSC: 'How many degrees cooler the liquid line is than the refrigerant\'s condensing temperature at that pressure. It tells you the refrigerant has fully condensed to a liquid with some margin before reaching the metering device.',
+  dischargeP: 'Pressure measured right at the compressor\'s discharge port, before the line runs to the condenser — as opposed to liquid pressure, which is measured after the condenser. A big gap between the two can point to a restriction or excessive line loss in between.',
+  retDB: 'The plain air temperature at the return grille — what a regular thermometer would read, with no adjustment for humidity.',
+  retWB: 'The temperature the return air would cool to if water evaporated into it — a stand-in for how much moisture the air is holding. Lower relative to dry bulb means drier air.',
+  retRH: 'How much moisture the return air is holding compared to the max it could hold at that temperature, as a percentage.',
+  retDP: 'The temperature the return air would need to cool to before moisture starts condensing out of it.',
+  retEnth: 'The total heat content of the return air — both the "regular" heat you feel (sensible) and the heat tied up in moisture (latent) — in Btu per pound of air.',
+  supDB: 'The plain air temperature at the supply register — what a regular thermometer would read, with no adjustment for humidity.',
+  supWB: 'The temperature the supply air would cool to if water evaporated into it — a stand-in for how much moisture the air is holding after the coil.',
+  supRH: 'How much moisture the supply air is holding compared to the max it could hold at that temperature, as a percentage — high numbers here can mean the coil isn\'t pulling out much moisture.',
+  supDP: 'The temperature the supply air would need to cool to before moisture starts condensing out of it.',
+  supEnth: 'The total heat content of the supply air — sensible plus latent — in Btu per pound of air, after it\'s passed through the coil.',
+  supStatic: 'Air pressure in the supply duct right after the equipment, measured with a manometer or static probe — positive, since the blower is pushing air into it.',
+  retStatic: 'Air pressure in the return duct right before the equipment — normally negative, since the blower is pulling out of that side.',
+  voltage: 'The actual line voltage at the disconnect or contactor, measured with a meter while the system is running.',
+  ratedVoltage: 'The nameplate voltage the equipment is designed for, e.g. 230V. Motors are built to tolerate roughly ±10% of this before it becomes a real problem.',
+  compAmp: 'The compressor\'s actual running current, clamped at one of the compressor\'s power leads while it\'s running.',
+  compRLA: 'Rated Load Amps — the current the compressor is designed to draw under normal running conditions, printed on the equipment nameplate. Running noticeably above this stresses the motor; running noticeably below it can point to reduced refrigerant flow.',
+  fanAmp: 'The condenser fan motor\'s actual running current, clamped at the motor leads while it\'s running.',
+  fanFLA: 'Full Load Amps — the maximum current the condenser fan motor is rated to draw, printed on the motor or equipment nameplate.',
+  capTolerance: 'How far off the rated capacitance is still considered acceptable, as a percentage. Most run capacitors are rated ±6%, but check the capacitor\'s own label — some are rated differently.',
+  capCompRated: 'The two numbers printed on the capacitor itself, e.g. "45/5 MFD 370V" — the first (larger) number is herm/compressor side capacitance, the second (smaller) is fan side, both in microfarads (µF). Most residential systems use one dual-rated capacitor for both.',
+  capCompAmps: 'Amp draw measured with your clamp meter on the wire between the capacitor\'s COMMON terminal and the HERM (compressor) terminal, with the system running.',
+  capCompVolts: 'Voltage measured across the capacitor\'s COMMON and HERM terminals with the system running.',
+  capFanAmps: 'Amp draw measured with your clamp meter on the wire between the capacitor\'s COMMON terminal and the FAN terminal, with the system running.',
+  capFanVolts: 'Voltage measured across the capacitor\'s COMMON and FAN terminals with the system running.',
+  shLabel: 'Superheat compares the suction line temperature to the refrigerant\'s boiling point at that pressure. It\'s one of the two main numbers (with subcooling) used to tell if a system is properly charged and confirm the evaporator isn\'t flooding or starving.',
+  scLabel: 'Subcooling compares the refrigerant\'s condensing temperature to the actual liquid line temperature. It\'s the companion number to superheat — together they\'re the main charge-diagnosis tool.',
+  dtLabel: 'The difference between return air temperature and supply air temperature — how many degrees the air drops crossing the evaporator coil. A normal range is roughly 16–22°F; outside that range usually points to an airflow or charge issue.',
+  edLabel: 'The difference in total heat content (enthalpy) between return and supply air — this captures the full cooling job the system is doing, including humidity removal, not just the temperature drop. A low number here means the system isn\'t removing much heat overall, even if the temperature split looks okay.',
+  tespLabel: 'Total External Static Pressure — the total resistance the blower has to push air against, combining the supply and return duct readings. High TESP relative to the unit\'s rated static is one of the clearest signs of restricted airflow (dirty filter, clogged coil, undersized ductwork).'
+};
+
+// ---- Question Bank: plain "what do you see" follow-ups, no gauge-reading
+// or diagnostic training required. Each question is tied to one finding by
+// id. Answering nudges that finding's score up or down and records a short
+// reasoning note that gets shown right on the finding card. This is the
+// second pass — numbers give a starting ranking, these sharpen it.
+const QUESTION_BANK = {
+  undercharge: [
+    { id:'uc_oil', text:'Any visible oil staining or residue on line set fittings, the coil, or around the compressor?',
+      yesEffect:15, noEffect:-5,
+      yesNote:'Oil staining is a common sign of a slow refrigerant leak — a leading cause of undercharge.',
+      noNote:'No visible oil doesn\'t rule out a leak, but removes one common indicator.' },
+    { id:'uc_hiss', text:'Any hissing, bubbling, or rushing sound anywhere along the lines or at fittings?',
+      yesEffect:12, noEffect:0,
+      yesNote:'A hissing or bubbling sound can point directly to an active refrigerant leak.',
+      noNote:'' }
+  ],
+  overcharge: [
+    { id:'oc_added', text:'Was refrigerant added to this system recently (this visit or a prior one) without weighing it in by nameplate charge?',
+      yesEffect:20, noEffect:-5,
+      yesNote:'Refrigerant added without weighing it in is one of the most common ways a system ends up overcharged.',
+      noNote:'' }
+  ],
+  restriction: [
+    { id:'re_cold', text:'Is there frost, ice, or a noticeably cold spot on the liquid line or filter-drier — not just the suction line?',
+      yesEffect:20, noEffect:-8,
+      yesNote:'A cold spot or frost on the liquid side (not the suction line) is a strong, direct sign of a restriction right at that point.',
+      noNote:'No cold spot on the liquid side makes a hard restriction less likely, though it doesn\'t rule out a partial one.' }
+  ],
+  overfeed: [
+    { id:'of_sweat', text:'Is the evaporator coil sweating heavily or icing, even though superheat is reading low?',
+      yesEffect:12, noEffect:0,
+      yesNote:'A wet or icing coil alongside low superheat fits a metering device that\'s feeding too much liquid.',
+      noNote:'' }
+  ],
+  condenser: [
+    { id:'co_dirty', text:'Does the outdoor coil look visibly dirty or matted with debris (grass, cottonwood, dust)?',
+      yesEffect:20, noEffect:-8,
+      yesNote:'A visibly dirty condenser coil directly explains poor heat rejection — this is usually the fix.',
+      noNote:'A clean-looking coil points away from a dirty-coil cause, though airflow can still be blocked elsewhere.' },
+    { id:'co_fan', text:'Is the condenser fan spinning freely, at full speed, with no wobble or unusual noise?',
+      yesEffect:-10, noEffect:15,
+      yesNote:'A fan spinning normally makes a fan-motor problem less likely.',
+      noNote:'A fan that\'s slow, wobbling, or noisy can\'t move enough air across the coil, which raises head pressure the same way a dirty coil does.' }
+  ],
+  airflow: [
+    { id:'af_filter', text:'Is the air filter dirty, clogged, or overdue for replacement?',
+      yesEffect:22, noEffect:-8,
+      yesNote:'A dirty filter is the single most common cause of restricted airflow — and the easiest to fix.',
+      noNote:'A clean filter rules out the most common cause, but the coil or blower could still be the issue.' },
+    { id:'af_coil', text:'Is the evaporator coil visibly dirty, dusty, or coated in debris?',
+      yesEffect:18, noEffect:0,
+      yesNote:'A dirty evaporator coil restricts airflow the same way a dirty filter does, just further downstream.',
+      noNote:'' },
+    { id:'af_regs', text:'Are all the supply and return registers open and unobstructed (nothing closed or blocked by furniture/rugs)?',
+      yesEffect:-8, noEffect:14,
+      yesNote:'Open, clear registers rule out one common airflow-restriction cause.',
+      noNote:'Closed or blocked registers restrict airflow just as much as a dirty filter — worth opening them and rechecking.' }
+  ],
+  ductleak: [
+    { id:'dl_visible', text:'Can you see, hear, or feel air leaking from duct joints, boots, or the plenum?',
+      yesEffect:20, noEffect:-5,
+      yesNote:'Visible or audible duct leakage directly explains air-side losses without a refrigerant-side cause.',
+      noNote:'' }
+  ],
+  compressor: [
+    { id:'cm_noise', text:'Does the compressor sound unusually loud, growl, click repeatedly, or hum without starting?',
+      yesEffect:20, noEffect:-8,
+      yesNote:'Unusual compressor noise on startup or while running is a strong mechanical-failure sign.',
+      noNote:'A quiet, normal-sounding compressor makes a mechanical failure less likely, though it doesn\'t rule out reduced pumping capacity.' }
+  ],
+  noncondensables: [
+    { id:'nc_service', text:'Has this system had recent service where evacuation/vacuum might have been skipped or cut short?',
+      yesEffect:18, noEffect:-5,
+      yesNote:'An incomplete evacuation is exactly how air or moisture gets left in a system.',
+      noNote:'' }
+  ],
+  humidity: [
+    { id:'hu_cycle', text:'Is the system short-cycling — turning on and off in quick bursts rather than running full cycles?',
+      yesEffect:15, noEffect:0,
+      yesNote:'Short cycling cuts every cycle short before much moisture can be removed, which fits weak dehumidification.',
+      noNote:'' }
+  ],
+  voltage_low: [
+    { id:'vl_wiring', text:'Any loose, corroded, or burnt-looking wire connections at the disconnect or contactor?',
+      yesEffect:20, noEffect:-5,
+      yesNote:'Loose or corroded connections cause voltage drop right at the equipment — a very fixable cause of low voltage.',
+      noNote:'Clean connections point toward the low voltage coming from further upstream (wiring size, breaker, or utility supply).' }
+  ],
+  voltage_high: [
+    { id:'vh_wiring', text:'Does this reading match what you\'d expect at the breaker panel, or does it seem isolated to this unit?',
+      yesEffect:10, noEffect:5,
+      yesNote:'A building-wide high reading points to the utility supply or panel rather than anything at the equipment.',
+      noNote:'An isolated high reading at the unit is worth a second look at the equipment\'s own wiring.' }
+  ],
+  amp_high: [
+    { id:'ah_cap', text:'Does the run/start capacitor look physically bulged, swollen, or leaking?',
+      yesEffect:20, noEffect:-5,
+      yesNote:'A bulged or leaking capacitor is a direct, visible sign of a failing capacitor forcing the compressor to work harder.',
+      noNote:'A normal-looking capacitor doesn\'t rule it out electrically, but points away from the most common visible cause.' }
+  ],
+  cap_comp: [
+    { id:'cc_bulge', text:'Does the capacitor look physically bulged, swollen, or leaking on the top or sides?',
+      yesEffect:18, noEffect:-6,
+      yesNote:'Physical bulging is a direct visible confirmation — a capacitor in this shape has lost capacitance and should be replaced regardless of what else is going on.',
+      noNote:'Capacitors can fail electrically before they show physical signs, so a normal appearance doesn\'t rule this out — trust the measured reading.' },
+    { id:'cc_start', text:'Does the compressor hesitate, hum, or struggle before it starts running?',
+      yesEffect:14, noEffect:0,
+      yesNote:'A hard or hesitant start is a classic symptom of a weak run capacitor not giving the motor enough of a boost.',
+      noNote:'' }
+  ],
+  cap_fan: [
+    { id:'cf_bulge', text:'Does the capacitor look physically bulged, swollen, or leaking on the top or sides?',
+      yesEffect:18, noEffect:-6,
+      yesNote:'Physical bulging is a direct visible confirmation — a capacitor in this shape has lost capacitance and should be replaced regardless of what else is going on.',
+      noNote:'Capacitors can fail electrically before they show physical signs, so a normal appearance doesn\'t rule this out — trust the measured reading.' },
+    { id:'cf_spin', text:'Does the fan spin up to full speed right away, or does it start slow, wobble, or need a nudge to get going?',
+      yesEffect:-8, noEffect:14,
+      yesNote:'A fan that starts cleanly and reaches full speed makes a weak capacitor less likely to be the whole story.',
+      noNote:'A slow or hesitant start is a classic sign the fan capacitor isn\'t giving the motor the boost it needs.' }
+  ]
+};
+
+// Answers persist across re-renders (every keystroke re-runs the whole
+// diagnosis), so this lives outside run() rather than being reset each time.
+let questionAnswers = {};
+
+function initFieldGuide(){
+  let guideOn = false;
+  const boxes = [];
+  Object.keys(FIELD_GUIDE).forEach(id=>{
+    const label = document.querySelector('label[for="'+id+'"]') || document.getElementById(id+'Label');
+    if (!label) return;
+    const anchor = label.tagName === 'LABEL' ? label.closest('.field') : label.closest('.readout');
+    if (!anchor) return;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'info-btn';
+    btn.textContent = '?';
+    btn.setAttribute('aria-label', 'What is this reading?');
+    label.appendChild(btn);
+
+    const box = document.createElement('div');
+    box.className = 'info-box';
+    box.hidden = true;
+    box.textContent = FIELD_GUIDE[id];
+    anchor.appendChild(box);
+    boxes.push(box);
+
+    btn.addEventListener('click', ()=>{
+      box.hidden = !box.hidden;
+      btn.classList.toggle('active', !box.hidden);
+    });
+  });
+
+  const guideToggle = document.getElementById('guideToggle');
+  guideToggle.addEventListener('click', ()=>{
+    guideOn = !guideOn;
+    boxes.forEach(b=>{ b.hidden = !guideOn; });
+    document.querySelectorAll('.info-btn').forEach(b=> b.classList.toggle('active', guideOn));
+    guideToggle.textContent = guideOn ? 'Hide Field Guide' : 'Show Field Guide';
+    guideToggle.classList.toggle('on', guideOn);
+  });
+}
+initFieldGuide();
+
+// ---- Scanner core (shared by both scan buttons below) ----
+// Snaps a photo, shows it enlarged so a tech can read it directly either
+// way, and makes a best-effort attempt at auto-filling fields via OCR.
+// Always shown as a starting guess to verify — never auto-trusted without
+// a chance to check it against the photo or the raw OCR text.
+let tesseractLoaded = false;
+function loadTesseract(){
+  return new Promise((resolve, reject)=>{
+    if (window.Tesseract){ resolve(); return; }
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    script.onload = ()=> resolve();
+    script.onerror = ()=> reject(new Error('OCR library failed to load'));
+    document.head.appendChild(script);
+  });
+}
+
+// Finds every occurrence of `label` followed (within a short gap, allowing
+// for OCR noise) by a number, and returns each with its position in the
+// text — position lets callers tell a first/second occurrence apart, e.g.
+// suction vs. liquid side reading the same "Pressure" label twice.
+function findLabeledNumbers(text, label){
+  const re = new RegExp(label + '\\D{0,12}(-?\\d{1,3}\\.?\\d?)', 'gi');
+  const out = [];
+  let m;
+  while ((m = re.exec(text)) !== null) out.push({ value: parseFloat(m[1]), index: m.index });
+  return out;
+}
+
+function parsePlateText(text){
+  const found = {};
+  const clean = text.replace(/[|]/g, 'I');
+
+  const voltMatch = clean.match(/(\d{2,3})\s*[\/\-–]?\s*(\d{2,3})?\s*V(?:OLT|AC)?/i);
+  if (voltMatch) found.ratedVoltage = parseFloat(voltMatch[1]);
+
+  const rlaMatch = clean.match(/R\.?\s?L\.?\s?A\.?\D{0,6}(\d{1,3}\.?\d?)/i);
+  if (rlaMatch) found.compRLA = parseFloat(rlaMatch[1]);
+
+  const flaMatch = clean.match(/(?:COND(?:\.|ENSER)?\s*FAN\s*)?F\.?\s?L\.?\s?A\.?\D{0,6}(\d{1,3}\.?\d?)/i);
+  if (flaMatch) found.fanFLA = parseFloat(flaMatch[1]);
+
+  return found;
+}
+
+// Reads a photo of the Job Link app's own Refrigerant Side or Air Side
+// screen. This should OCR far more reliably than a stamped metal plate —
+// clean rendered text, no glare or corrosion — and can fill a much larger
+// set of fields from one photo. Still built defensively: paired labels
+// (e.g. "Pressure" shown once for suction, once for liquid) only get
+// auto-filled when BOTH occurrences are found — if OCR only catches one
+// (common when a probe reads "LINK TOOL" instead of a number), it's safer
+// to leave both blank than guess which side the one number belongs to.
+function parseJobLinkText(text){
+  const found = {};
+  const isAirSide = /return|supply|dry\s*bulb|wet\s*bulb|dew\s*point|enthalpy|relative\s*humidity/i.test(text);
+  const isRefrig = /suction|liquid|superheat|subcool|saturation/i.test(text);
+
+  if (isRefrig){
+    const discharge = findLabeledNumbers(text, 'Discharge\\s*Pressure');
+    if (discharge[0]) found.dischargeP = discharge[0].value;
+    const dischargeIdx = discharge.map(d=>d.index);
+
+    const allPressure = findLabeledNumbers(text, 'Pressure').filter(p=>!dischargeIdx.some(di=>Math.abs(p.index-di)<25));
+    if (allPressure.length === 2){ found.suctionP = allPressure[0].value; found.liquidP = allPressure[1].value; }
+
+    const temps = findLabeledNumbers(text, 'Temperature');
+    if (temps.length === 2){ found.suctionT = temps[0].value; found.liquidT = temps[1].value; }
+
+    const vaporSat = findLabeledNumbers(text, 'Vapor\\s*Saturation');
+    if (vaporSat[0]) found.vaporSat = vaporSat[0].value;
+    const liquidSat = findLabeledNumbers(text, 'Liquid\\s*Saturation');
+    if (liquidSat[0]) found.liquidSat = liquidSat[0].value;
+
+    const sh = findLabeledNumbers(text, 'Actual\\s*Superheat');
+    if (sh[0]) found.actualSH = sh[0].value;
+    const sc = findLabeledNumbers(text, 'Actual\\s*Subcool(?:ing)?');
+    if (sc[0]) found.actualSC = sc[0].value;
+  }
+
+  if (isAirSide){
+    const pairs = [
+      ['Dry\\s*Bulb', 'retDB', 'supDB'],
+      ['Wet\\s*Bulb', 'retWB', 'supWB'],
+      ['Relative\\s*Humidity', 'retRH', 'supRH'],
+      ['Dew\\s*Point', 'retDP', 'supDP'],
+      ['Enthalpy', 'retEnth', 'supEnth']
+    ];
+    pairs.forEach(([label, retId, supId])=>{
+      const m = findLabeledNumbers(text, label);
+      if (m.length === 2){ found[retId] = m[0].value; found[supId] = m[1].value; }
+    });
+  }
+
+  return found;
+}
+
+function initScanner(triggerBtnId, fileInputId, parseFn, notFoundMsg){
+  const scanBtn = document.getElementById(triggerBtnId);
+  const fileInput = document.getElementById(fileInputId);
+  const scanPanel = document.getElementById('scanPanel');
+  const plateImg = document.getElementById('plateImg');
+  const scanStatus = document.getElementById('scanStatus');
+  const scanRaw = document.getElementById('scanRaw');
+  const scanClose = document.getElementById('scanClose');
+
+  function closeScan(){ scanPanel.classList.remove('open'); }
+  function openScan(){ scanPanel.classList.add('open'); }
+
+  scanBtn.addEventListener('click', ()=> fileInput.click());
+  scanClose.addEventListener('click', closeScan);
+  scanPanel.addEventListener('click', (e)=>{ if (e.target === scanPanel) closeScan(); });
+  document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') closeScan(); });
+
+  fileInput.addEventListener('change', async ()=>{
+    const file = fileInput.files[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    plateImg.src = url;
+    openScan();
+    scanRaw.hidden = true;
+    scanStatus.textContent = 'Loading OCR engine…';
+
+    const timeout = new Promise((_, reject)=> setTimeout(()=> reject(new Error('timeout')), 25000));
+
+    try {
+      if (!tesseractLoaded){
+        await Promise.race([loadTesseract(), timeout]);
+        tesseractLoaded = true;
+      }
+      scanStatus.textContent = 'Starting up…';
+      const result = await Promise.race([
+        Tesseract.recognize(url, 'eng', {
+          logger: m=>{
+            if (m.status === 'recognizing text' && typeof m.progress === 'number'){
+              scanStatus.textContent = 'Reading — ' + Math.round(m.progress*100) + '%…';
+            } else if (m.status){
+              scanStatus.textContent = m.status.charAt(0).toUpperCase() + m.status.slice(1) + '…';
+            }
+          }
+        }),
+        timeout
+      ]);
+      const text = (result && result.data) ? result.data.text : '';
+      const found = parseFn(text || '');
+
+      let filledAny = false;
+      Object.keys(found).forEach(id=>{
+        const el = document.getElementById(id);
+        if (el && !isNaN(found[id])){
+          el.value = found[id];
+          el.classList.add('scanned');
+          filledAny = true;
+        }
+      });
+
+      scanStatus.textContent = filledAny
+        ? 'Pulled some values from the photo — double-check them before trusting them, then close this to keep going.'
+        : notFoundMsg;
+      if (text && text.trim()){
+        scanRaw.hidden = false;
+        scanRaw.textContent = text.trim();
+      }
+    } catch(err){
+      scanStatus.textContent = 'Automatic reading hit an error (or took too long) and couldn\'t finish. The photo above is still there to reference — enter values manually below.';
+    }
+  });
+}
+initScanner('scanBtn', 'plateInput', parsePlateText, 'Couldn\'t confidently pull numbers off this plate. Zoom in on the photo above and enter values manually below.');
+initScanner('jobLinkScanBtn', 'jobLinkInput', parseJobLinkText, 'Couldn\'t confidently match this to a Refrigerant Side or Air Side screen. Zoom in on the photo above and enter values manually below.');
+
+// ---- Step-by-step wizard (one field at a time, strict EAR order) ----
+// Nothing below this line touches run(), the scoring, EAR logic, question
+// bank, or capacitor math — those are proven and stay exactly as they were.
+// The wizard's only job is to get real values into the same underlying
+// <input>/<select> elements run() already reads, one at a time, in
+// Electrical → Airflow → Refrigerant order, then hand off to run().
+//
+// Fields move physically in and out of the DOM (via appendChild) between
+// their permanent home (#legacyInputs, always present, never displayed)
+// and the wizard card. They are never destroyed or recreated, so a value
+// already typed is never at risk of being wiped by a re-render.
+
+function pkgTipSync(){
+  document.getElementById('pkgTip').hidden = (document.getElementById('sysType').value !== 'packageunit');
+}
+document.getElementById('sysType').addEventListener('change', pkgTipSync);
+
+const WIZ_STEPS = [
+  { type:'select', id:'refrigerant', phase:'setup', title:'Refrigerant Type', desc:'What refrigerant is in this system? Check the nameplate or line set tag.',
+    options:[['R410A','R-410A'],['R22','R-22'],['R32','R-32'],['R454B','R-454B']] },
+  { type:'select', id:'sysType', phase:'setup', title:'System Type', desc:'What kind of system are you working on?',
+    options:[['straightac','Straight AC'],['heatpump','Heat Pump (cooling mode)'],['packageunit','Package Unit (Gas Pack)']], showPkgTip:true },
+  { type:'select', id:'metering', phase:'setup', title:'Metering Device', desc:'TXV, fixed orifice, or not sure?',
+    options:[['txv','TXV / TEV'],['orifice','Fixed Orifice / Piston'],['unknown','Not Sure']] },
+
+  { type:'intro', phase:'electrical', title:'Electrical — checked first, per EAR', desc:'Electrical problems can cause misleading airflow and refrigerant symptoms downstream, which is why this comes first. Got the data plate handy? Scan it below to autofill rated values — or tap Continue to skip that and enter everything by hand.', scanBtn:true },
+  { type:'field', id:'voltage', phase:'electrical' },
+  { type:'field', id:'ratedVoltage', phase:'electrical' },
+  { type:'checkpoint', id:'chk_voltage', phase:'electrical', check:'voltage' },
+  { type:'field', id:'compAmp', phase:'electrical', group:'COMPRESSOR', groupClass:'grp-elec' },
+  { type:'field', id:'compRLA', phase:'electrical', group:'COMPRESSOR', groupClass:'grp-elec' },
+  { type:'checkpoint', id:'chk_ampComp', phase:'electrical', check:'ampComp' },
+  { type:'field', id:'fanAmp', phase:'electrical', group:'CONDENSER FAN', groupClass:'grp-elec' },
+  { type:'field', id:'fanFLA', phase:'electrical', group:'CONDENSER FAN', groupClass:'grp-elec' },
+  { type:'checkpoint', id:'chk_ampFan', phase:'electrical', check:'ampFan' },
+  { type:'field', id:'capTolerance', phase:'electrical' },
+  { type:'field', id:'capCompRated', phase:'electrical' },
+  { type:'field', id:'capCompAmps', phase:'electrical', group:'CAPACITOR — HERM SIDE', groupClass:'grp-elec' },
+  { type:'field', id:'capCompVolts', phase:'electrical', group:'CAPACITOR — HERM SIDE', groupClass:'grp-elec' },
+  { type:'field', id:'capFanAmps', phase:'electrical', group:'CAPACITOR — FAN SIDE', groupClass:'grp-elec' },
+  { type:'field', id:'capFanVolts', phase:'electrical', group:'CAPACITOR — FAN SIDE', groupClass:'grp-elec' },
+  { type:'checkpoint', id:'chk_cap', phase:'electrical', check:'capacitor' },
+
+  { type:'intro', phase:'airflow', title:'Airflow — second, per EAR', desc:'Refrigerant readings only mean what they\'re supposed to mean once airflow across the coil is confirmed correct — that\'s why this comes before Refrigerant.' },
+  { type:'field', id:'ambient', phase:'airflow' },
+  { type:'field', id:'targetStatic', phase:'airflow' },
+  { type:'field', id:'supStatic', phase:'airflow', group:'SUPPLY', groupClass:'grp-supply' },
+  { type:'field', id:'retStatic', phase:'airflow', group:'RETURN', groupClass:'grp-return' },
+  { type:'checkpoint', id:'chk_static', phase:'airflow', check:'static' },
+  { type:'intro', phase:'airflow', title:'Air Side Readings', desc:'Got a Job Link Air Side screenshot? Scan it below to autofill these — or tap Continue to skip that and enter them by hand.', jobLinkBtn:true },
+  { type:'field', id:'retDB', phase:'airflow', group:'RETURN', groupClass:'grp-return' },
+  { type:'field', id:'retWB', phase:'airflow', group:'RETURN', groupClass:'grp-return' },
+  { type:'field', id:'retRH', phase:'airflow', group:'RETURN', groupClass:'grp-return' },
+  { type:'field', id:'retDP', phase:'airflow', group:'RETURN', groupClass:'grp-return' },
+  { type:'field', id:'retEnth', phase:'airflow', group:'RETURN', groupClass:'grp-return' },
+  { type:'field', id:'supDB', phase:'airflow', group:'SUPPLY', groupClass:'grp-supply' },
+  { type:'field', id:'supWB', phase:'airflow', group:'SUPPLY', groupClass:'grp-supply' },
+  { type:'field', id:'supRH', phase:'airflow', group:'SUPPLY', groupClass:'grp-supply' },
+  { type:'field', id:'supDP', phase:'airflow', group:'SUPPLY', groupClass:'grp-supply' },
+  { type:'field', id:'supEnth', phase:'airflow', group:'SUPPLY', groupClass:'grp-supply' },
+  { type:'checkpoint', id:'chk_airside', phase:'airflow', check:'airside' },
+
+  { type:'intro', phase:'refrigerant', title:'Refrigerant — last, per EAR', desc:'With electrical and airflow already checked, these readings will actually mean what they\'re supposed to. Got a Job Link Refrigerant Side screenshot? Scan it below — or tap Continue to skip that and enter them by hand.', jobLinkBtn:true },
+  { type:'field', id:'targetSH', phase:'refrigerant' },
+  { type:'field', id:'targetSC', phase:'refrigerant' },
+  { type:'field', id:'suctionP', phase:'refrigerant', group:'SUCTION — LOW SIDE', groupClass:'grp-suction' },
+  { type:'field', id:'suctionT', phase:'refrigerant', group:'SUCTION — LOW SIDE', groupClass:'grp-suction' },
+  { type:'field', id:'vaporSat', phase:'refrigerant', group:'SUCTION — LOW SIDE', groupClass:'grp-suction' },
+  { type:'field', id:'actualSH', phase:'refrigerant' },
+  { type:'field', id:'liquidP', phase:'refrigerant', group:'LIQUID — HIGH SIDE', groupClass:'grp-liquid' },
+  { type:'field', id:'liquidT', phase:'refrigerant', group:'LIQUID — HIGH SIDE', groupClass:'grp-liquid' },
+  { type:'field', id:'liquidSat', phase:'refrigerant', group:'LIQUID — HIGH SIDE', groupClass:'grp-liquid' },
+  { type:'field', id:'actualSC', phase:'refrigerant' },
+  { type:'field', id:'dischargeP', phase:'refrigerant', group:'LIQUID — HIGH SIDE', groupClass:'grp-liquid' },
+  { type:'checkpoint', id:'chk_charge', phase:'refrigerant', check:'charge' },
+];
+
+const WIZ_PHASE_LABEL = { setup:'SETUP', electrical:'ELECTRICAL', airflow:'AIRFLOW', refrigerant:'REFRIGERANT' };
+
+// ---- Checkpoint verdicts ----
+// Small, standalone, read-only evaluators — deliberately NOT sharing code
+// with run() so a checkpoint change can never risk breaking the tested
+// diagnosis engine. Thresholds are copied from run()'s equivalent logic
+// and must be kept in sync with it by hand if either ever changes:
+//   voltage ±10% (flag past ±5%), amp >110% of rated, capacitor ±tolerance%,
+//   TESP >130%/<70% of rated, delta T >23°F/<14°F, enthalpy drop <8 Btu/lb,
+//   superheat/subcool ±4°F/±3°F of target.
+const WIZ_CHECKS = {
+  voltage(){
+    const v = num('voltage'), rv = num('ratedVoltage');
+    if (v === null || !rv) return { status:'skip', msg:'Not enough info to check yet — both fields were left blank.' };
+    const ratio = v / rv;
+    if (ratio < 0.95) return { status:'bad', msg:'Voltage is running low — '+v+'V against a rated '+rv+'V ('+Math.round(ratio*100)+'%). Low voltage alone can cause higher amp draw, nuisance trips, and misleading downstream symptoms.' };
+    if (ratio > 1.05) return { status:'bad', msg:'Voltage is running high — '+v+'V against a rated '+rv+'V ('+Math.round(ratio*100)+'%). Sustained overvoltage stresses motors and controls.' };
+    return { status:'good', msg:'Voltage looks normal — '+v+'V against a rated '+rv+'V.' };
+  },
+  ampComp(){
+    const a = num('compAmp'), r = num('compRLA');
+    if (a === null || !r) return { status:'skip', msg:'Not enough info to check yet — both fields were left blank.' };
+    const ratio = a / r;
+    if (ratio > 1.1) return { status:'bad', msg:'Compressor amp draw is running high — '+a+'A against a rated '+r+'A RLA ('+Math.round(ratio*100)+'% of rated). Check for a weak run capacitor, high head pressure, or a mechanical issue.' };
+    return { status:'good', msg:'Compressor amp draw looks normal — '+a+'A against a rated '+r+'A RLA.' };
+  },
+  ampFan(){
+    const a = num('fanAmp'), r = num('fanFLA');
+    if (a === null || !r) return { status:'skip', msg:'Not enough info to check yet — both fields were left blank.' };
+    const ratio = a / r;
+    if (ratio > 1.1) return { status:'bad', msg:'Condenser fan amp draw is running high — '+a+'A against a rated '+r+'A FLA ('+Math.round(ratio*100)+'% of rated). A motor working harder than it should fits a coil fighting for airflow, or a fan motor on its way out.' };
+    return { status:'good', msg:'Condenser fan amp draw looks normal — '+a+'A against a rated '+r+'A FLA.' };
+  },
+  capacitor(){
+    const tol = num('capTolerance') !== null ? num('capTolerance') : 6;
+    const cr = num('capCompRated'), ca = num('capCompAmps'), cv = num('capCompVolts');
+    const fr = num('capFanRated'), fa = num('capFanAmps'), fv = num('capFanVolts');
+    const compMFD = (ca!==null && cv) ? (ca*2652/cv) : null;
+    const fanMFD = (fa!==null && fv) ? (fa*2652/fv) : null;
+    const compDev = (compMFD!==null && cr) ? ((compMFD-cr)/cr*100) : null;
+    const fanDev = (fanMFD!==null && fr) ? ((fanMFD-fr)/fr*100) : null;
+    if (compDev === null && fanDev === null) return { status:'skip', msg:'Not enough info to check yet — amps/volts/rating were left blank.' };
+    const bad = [];
+    if (compDev !== null && Math.abs(compDev) > tol) bad.push('Herm side is '+Math.abs(compDev).toFixed(1)+'% off ('+compMFD.toFixed(1)+' µF vs '+cr.toFixed(1)+' µF rated)');
+    if (fanDev !== null && Math.abs(fanDev) > tol) bad.push('Fan side is '+Math.abs(fanDev).toFixed(1)+'% off ('+fanMFD.toFixed(1)+' µF vs '+fr.toFixed(1)+' µF rated)');
+    if (bad.length) return { status:'bad', msg:'Capacitor reading outside your ±'+tol+'% allowance: '+bad.join('; ')+'. A capacitor reading low is the common case — it loses capacitance with age and heat.' };
+    return { status:'good', msg:'Capacitor reading(s) look normal, within ±'+tol+'% of rated.' };
+  },
+  static(){
+    const target = num('targetStatic') !== null ? num('targetStatic') : 0.5;
+    const sup = num('supStatic'), ret = num('retStatic');
+    if (sup === null || ret === null) return { status:'skip', msg:'Not enough info to check yet — supply/return static were left blank.' };
+    const tesp = sup - ret;
+    const ratio = tesp / target;
+    if (ratio > 1.3) return { status:'bad', msg:'Total external static is running high — '+tesp.toFixed(2)+' in. w.c. against a rated '+target.toFixed(2)+' ('+Math.round(ratio*100)+'%). One of the clearest signs of restricted airflow — dirty filter, clogged coil, or undersized ductwork.' };
+    if (ratio < 0.7) return { status:'bad', msg:'Total external static is running low — '+tesp.toFixed(2)+' in. w.c. against a rated '+target.toFixed(2)+' ('+Math.round(ratio*100)+'%). Usually points to duct leakage or an oversized return/filter grille.' };
+    return { status:'good', msg:'Total external static looks normal — '+tesp.toFixed(2)+' in. w.c. against a rated '+target.toFixed(2)+'.' };
+  },
+  airside(){
+    const retDB = num('retDB'), supDB = num('supDB');
+    const retEnth = num('retEnth'), supEnth = num('supEnth');
+    if (retDB === null || supDB === null) return { status:'skip', msg:'Not enough info to check yet — return/supply dry bulb were left blank.' };
+    const deltaT = retDB - supDB;
+    const enthDrop = (retEnth!==null && supEnth!==null) ? (retEnth - supEnth) : null;
+    const notes = [];
+    let bad = false;
+    if (deltaT > 23){ bad = true; notes.push('delta T is high at '+deltaT.toFixed(1)+'°F (normal is 16–22°F) — points to restricted airflow'); }
+    else if (deltaT < 14){ bad = true; notes.push('delta T is low at '+deltaT.toFixed(1)+'°F (normal is 16–22°F)'); }
+    else notes.push('delta T looks normal at '+deltaT.toFixed(1)+'°F');
+    if (enthDrop !== null && enthDrop < 8){ bad = true; notes.push('enthalpy drop is low at '+enthDrop.toFixed(1)+' Btu/lb, suggesting low total capacity'); }
+    return { status: bad ? 'bad' : 'good', msg: notes.join('; ') + '.' };
+  },
+  charge(){
+    const targetSH = num('targetSH') !== null ? num('targetSH') : 12;
+    const targetSC = num('targetSC') !== null ? num('targetSC') : 10;
+    const sh = num('actualSH'), sc = num('actualSC');
+    if (sh === null || sc === null) return { status:'skip', msg:'Enter both actual superheat and actual subcooling to check charge.' };
+    const shD = sh - targetSH, scD = sc - targetSC;
+    const shStatus = shD <= -4 ? 'low' : (shD >= 4 ? 'high' : 'normal');
+    const scStatus = scD <= -3 ? 'low' : (scD >= 3 ? 'high' : 'normal');
+    if (shStatus === 'high' && scStatus !== 'high') return { status:'bad', msg:'Superheat '+sh+'°F (target ~'+targetSH+'°F) with subcooling '+scStatus+' at '+sc+'°F — the classic undercharge signature.' };
+    if (shStatus === 'low' && scStatus === 'high') return { status:'bad', msg:'Superheat '+sh+'°F is low while subcooling '+sc+'°F is high — the classic overcharge signature.' };
+    if (shStatus === 'high' && scStatus === 'high') return { status:'bad', msg:'Both superheat ('+sh+'°F) and subcooling ('+sc+'°F) are elevated — points to a restriction (clogged filter-drier, kinked line, or a partially blocked TXV/orifice).' };
+    return { status:'good', msg:'Superheat '+sh+'°F and subcooling '+sc+'°F are both close to target — no charge-related flag so far.' };
+  }
+};
+
+let wizIndex = 0;
+
+function wizHome(){ return document.getElementById('legacyInputs'); }
+
+// Always return every possibly-moved element to its permanent home before
+// building new step content — this runs on every render, so there's never
+// a moment where a live input sits inside markup that's about to be wiped.
+function wizResetMoved(){
+  const home = wizHome();
+  WIZ_STEPS.forEach(step=>{
+    if (step.type !== 'field') return;
+    const input = document.getElementById(step.id);
+    if (!input) return;
+    const field = input.closest('.field');
+    if (field && field.parentElement !== home) home.appendChild(field);
+  });
+  const scanBtn = document.getElementById('scanBtn');
+  if (scanBtn && scanBtn.parentElement !== home) home.appendChild(scanBtn);
+  const jobLinkRow = document.getElementById('jobLinkScanRow');
+  if (jobLinkRow && jobLinkRow.parentElement !== home) home.appendChild(jobLinkRow);
+}
+
+function wizRenderProgress(){
+  const pct = Math.round((wizIndex / (WIZ_STEPS.length)) * 100);
+  document.getElementById('wizProgressFill').style.width = pct + '%';
+  const step = WIZ_STEPS[wizIndex];
+  const phaseSteps = WIZ_STEPS.filter(s=>s.phase===step.phase);
+  const posInPhase = phaseSteps.indexOf(step) + 1;
+  document.getElementById('wizProgressLabel').textContent =
+    WIZ_PHASE_LABEL[step.phase] + ' — ' + posInPhase + ' of ' + phaseSteps.length + '  ·  step ' + (wizIndex+1) + ' of ' + WIZ_STEPS.length;
+}
+
+function wizRenderStep(){
+  wizResetMoved();
+  const step = WIZ_STEPS[wizIndex];
+  const card = document.getElementById('wizCard');
+  card.innerHTML = '';
+
+  const badge = document.createElement('div');
+  badge.className = 'wiz-phase-badge ' + step.phase;
+  badge.textContent = WIZ_PHASE_LABEL[step.phase];
+  card.appendChild(badge);
+
+  if (step.type === 'select'){
+    const title = document.createElement('div');
+    title.className = 'wiz-step-title';
+    title.textContent = step.title;
+    card.appendChild(title);
+    const desc = document.createElement('div');
+    desc.className = 'wiz-step-desc';
+    desc.textContent = step.desc;
+    card.appendChild(desc);
+
+    const group = document.createElement('div');
+    group.className = 'wiz-select-group';
+    const realSelect = document.getElementById(step.id);
+    const currentVal = realSelect.value;
+    step.options.forEach(([val, label])=>{
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'wiz-select-btn' + (val === currentVal ? ' chosen' : '');
+      btn.textContent = label;
+      btn.addEventListener('click', ()=>{
+        realSelect.value = val;
+        if (step.showPkgTip) pkgTipSync();
+        group.querySelectorAll('.wiz-select-btn').forEach(b=> b.classList.remove('chosen'));
+        btn.classList.add('chosen');
+      });
+      group.appendChild(btn);
+    });
+    card.appendChild(group);
+
+    if (step.showPkgTip){
+      const tip = document.getElementById('pkgTip');
+      card.appendChild(tip);
+      pkgTipSync();
+    }
+  }
+
+  else if (step.type === 'intro'){
+    const title = document.createElement('div');
+    title.className = 'wiz-step-title';
+    title.textContent = step.title;
+    card.appendChild(title);
+    const desc = document.createElement('div');
+    desc.className = 'wiz-step-desc';
+    desc.textContent = step.desc;
+    card.appendChild(desc);
+
+    const actions = document.createElement('div');
+    actions.className = 'wiz-intro-actions';
+    if (step.scanBtn) actions.appendChild(document.getElementById('scanBtn'));
+    if (step.jobLinkBtn) actions.appendChild(document.getElementById('jobLinkScanRow'));
+    card.appendChild(actions);
+
+    if (step.scanBtn || step.jobLinkBtn){
+      const orNote = document.createElement('div');
+      orNote.className = 'wiz-or-manual';
+      orNote.textContent = 'No photo handy? Just tap Continue below to enter these by hand instead.';
+      card.appendChild(orNote);
+    }
+  }
+
+  else if (step.type === 'field'){
+    if (step.group){
+      const groupTag = document.createElement('div');
+      groupTag.className = 'wiz-group-tag ' + (step.groupClass || '');
+      groupTag.textContent = step.group;
+      card.appendChild(groupTag);
+    }
+    const input = document.getElementById(step.id);
+    const field = input.closest('.field');
+    const slot = document.createElement('div');
+    slot.className = 'wiz-field-slot';
+    slot.appendChild(field);
+    card.appendChild(slot);
+  }
+
+  else if (step.type === 'checkpoint'){
+    const CHECK_TITLES = {
+      voltage:'Voltage Check', ampComp:'Compressor Amp Check', ampFan:'Condenser Fan Amp Check',
+      capacitor:'Capacitor Check', static:'Static Pressure Check', airside:'Air Side Check',
+      charge:'Charge Check — Superheat / Subcooling'
+    };
+    const title = document.createElement('div');
+    title.className = 'wiz-step-title';
+    title.textContent = CHECK_TITLES[step.check] || 'Check';
+    card.appendChild(title);
+
+    const verdict = WIZ_CHECKS[step.check] ? WIZ_CHECKS[step.check]() : { status:'skip', msg:'' };
+    const panel = document.createElement('div');
+    panel.className = 'wiz-verdict wiz-verdict-' + verdict.status;
+    const icon = verdict.status === 'good' ? '✓' : (verdict.status === 'bad' ? '⚠' : '·');
+    panel.innerHTML = '<div class="wiz-verdict-icon">' + icon + '</div><div class="wiz-verdict-msg">' + verdict.msg + '</div>';
+    card.appendChild(panel);
+
+    if (verdict.status === 'bad'){
+      const jumpBtn = document.createElement('button');
+      jumpBtn.type = 'button';
+      jumpBtn.className = 'wiz-jump-btn';
+      jumpBtn.textContent = 'Flagged — See Full Diagnosis Now →';
+      jumpBtn.addEventListener('click', wizFinish);
+      card.appendChild(jumpBtn);
+    }
+  }
+
+  wizRenderProgress();
+  document.getElementById('wizBack').style.visibility = wizIndex === 0 ? 'hidden' : 'visible';
+  const nextBtn = document.getElementById('wizNext');
+  if (wizIndex === WIZ_STEPS.length - 1){
+    nextBtn.textContent = 'See Diagnosis →';
+  } else if (step.type === 'intro' || step.type === 'checkpoint'){
+    nextBtn.textContent = 'Continue →';
+  } else {
+    nextBtn.textContent = 'Next →';
+  }
+}
+
+function wizFinish(){
+  try {
+    wizResetMoved();
+    document.getElementById('wizard').style.display = 'none';
+    document.getElementById('resultsSection').style.display = 'block';
+    run();
+    window.scrollTo(0,0);
+  } catch(err){
+    // Never leave the tech staring at a dead page. If anything above
+    // throws, still surface the results section and show what went
+    // wrong instead of the browser's default uncaught-error behavior,
+    // and log the real error to the console for debugging.
+    console.error('MANIFOLD wizFinish error:', err);
+    try {
+      document.getElementById('wizard').style.display = 'none';
+      document.getElementById('resultsSection').style.display = 'block';
+      const diag = document.getElementById('diagContent');
+      if (diag){
+        diag.innerHTML = '<div class="empty-state">Something went wrong finishing up ('+(err && err.message ? err.message : 'unknown error')+'). Try "Start Over" below, or reload the page — your readings may need to be re-entered. If this keeps happening, note what step you were on and what you\'d just done (scan, weather lookup, review/edit) when it happened.</div>';
+      }
+    } catch(err2){
+      console.error('MANIFOLD wizFinish recovery also failed:', err2);
+    }
+  }
+}
+
+function wizDefaultNextAction(){
+  if (wizIndex >= WIZ_STEPS.length - 1){ wizFinish(); return; }
+  wizIndex++;
+  wizRenderStep();
+}
+// Next always calls through this one variable — reassigned (not stacked)
+// when the button needs different behavior, e.g. on the review screen.
+// Two separate handlers on the same button (addEventListener + .onclick)
+// would both fire on every click; routing through one variable avoids that.
+let wizNextAction = wizDefaultNextAction;
+document.getElementById('wizNext').addEventListener('click', ()=>{
+  try {
+    wizNextAction();
+  } catch(err){
+    // This is the exact failure mode a tech would see as "I tapped Next
+    // and nothing happened" — log it and say so instead of staying silent.
+    console.error('MANIFOLD wizNext error:', err);
+    alert('Something went wrong (' + (err && err.message ? err.message : 'unknown error') + '). Try tapping Next again, or Start Over if it keeps happening.');
+  }
+});
+
+document.getElementById('wizBack').addEventListener('click', ()=>{
+  if (wizIndex === 0) return;
+  wizIndex--;
+  wizRenderStep();
+});
+document.getElementById('wizSkipResults').addEventListener('click', wizFinish);
+
+function wizStartEditingAt(stepIdx){
+  wizNextAction = wizDefaultNextAction;
+  document.getElementById('resultsSection').style.display = 'none';
+  document.getElementById('wizard').style.display = 'block';
+  wizIndex = stepIdx;
+  wizRenderStep();
+  window.scrollTo(0,0);
+}
+
+function wizRenderReview(){
+  const list = document.getElementById('wizReviewList');
+  let html = '';
+  let lastPhase = null;
+  WIZ_STEPS.forEach((step, idx)=>{
+    if (step.type !== 'field' && step.type !== 'select') return;
+    if (step.phase !== lastPhase){
+      html += '<div class="wiz-review-phase">' + WIZ_PHASE_LABEL[step.phase] + '</div>';
+      lastPhase = step.phase;
+    }
+    const el = document.getElementById(step.id);
+    const field = el.closest('.field');
+    const labelEl = field ? field.querySelector('label') : null;
+    // Read the label's full text (which includes the "?" info-button's own
+    // text once initFieldGuide has run) and strip that trailing character,
+    // rather than assuming which child node is the label's own text — the
+    // exact node order/count there isn't something this code should have
+    // to depend on.
+    const label = labelEl ? (labelEl.textContent || '').replace(/\?\s*$/, '').trim() : (step.title || step.id);
+    let display;
+    if (step.type === 'select'){
+      const opt = step.options.find(o=>o[0]===el.value);
+      display = opt ? opt[1] : el.value;
+    } else {
+      display = el.value !== '' ? el.value : null;
+    }
+    html += '<div class="wiz-review-row" data-idx="' + idx + '">'
+      + '<span class="rv-label">' + label + '</span>'
+      + '<span class="rv-value' + (display===null?' empty':'') + '">' + (display===null?'not entered':display) + '</span>'
+      + '</div>';
+  });
+  list.innerHTML = html;
+  list.addEventListener('click', (e)=>{
+    const row = e.target.closest('.wiz-review-row');
+    if (!row) return;
+    wizStartEditingAt(parseInt(row.dataset.idx, 10));
+  });
+}
+
+document.getElementById('reviewBtn').addEventListener('click', ()=>{
+  const card = document.getElementById('wizCard');
+  wizResetMoved();
+  card.innerHTML = '<div class="wiz-step-title">Review &amp; Edit</div>'
+    + '<div class="wiz-step-desc">Tap any reading to jump back and change it.</div>'
+    + '<div class="wiz-review-list" id="wizReviewList"></div>';
+  document.getElementById('resultsSection').style.display = 'none';
+  document.getElementById('wizard').style.display = 'block';
+  document.getElementById('wizProgressLabel').textContent = 'REVIEWING ENTRIES';
+  document.getElementById('wizProgressFill').style.width = '100%';
+  document.getElementById('wizBack').style.visibility = 'hidden';
+  document.getElementById('wizNext').textContent = 'Done — See Diagnosis →';
+  wizRenderReview();
+  wizNextAction = wizFinish;
+});
+
+document.getElementById('startOverBtn').addEventListener('click', ()=>{
+  wizNextAction = wizDefaultNextAction;
+  wizIndex = 0;
+  document.getElementById('resultsSection').style.display = 'none';
+  document.getElementById('wizard').style.display = 'block';
+  wizRenderStep();
+  window.scrollTo(0,0);
+});
+
+wizRenderStep();
+
+function run(){
+  const refrigerant = document.getElementById('refrigerant').value;
+  const sysType = document.getElementById('sysType').value;
+  document.getElementById('pkgTip').hidden = (sysType !== 'packageunit');
+  const ambient = num('ambient');
+  const targetSHIn = num('targetSH');
+  const targetSCIn = num('targetSC');
+  const targetSH = targetSHIn !== null ? targetSHIn : 12;
+  const targetSC = targetSCIn !== null ? targetSCIn : 10;
+  const targetStaticIn = num('targetStatic');
+  const targetStatic = targetStaticIn !== null ? targetStaticIn : 0.5;
+
+  const vaporSat = num('vaporSat');
+  const actualSH = num('actualSH');
+  const liquidSat = num('liquidSat');
+  const actualSC = num('actualSC');
+  const liquidP = num('liquidP');
+
+  const retDB = num('retDB'), supDB = num('supDB');
+  const retEnth = num('retEnth'), supEnth = num('supEnth');
+  const supRH = num('supRH');
+  const supStatic = num('supStatic'), retStatic = num('retStatic');
+  const voltage = num('voltage'), ratedVoltage = num('ratedVoltage');
+  const compAmp = num('compAmp'), compRLA = num('compRLA');
+  const fanAmp = num('fanAmp'), fanFLA = num('fanFLA');
+  const capToleranceIn = num('capTolerance');
+  const capTolerance = capToleranceIn !== null ? capToleranceIn : 6;
+  const capCompRated = num('capCompRated'), capCompAmps = num('capCompAmps'), capCompVolts = num('capCompVolts');
+  const capFanRated = num('capFanRated'), capFanAmps = num('capFanAmps'), capFanVolts = num('capFanVolts');
+
+  const deltaT = (retDB!==null && supDB!==null) ? (retDB - supDB) : null;
+  const enthalpyDrop = (retEnth!==null && supEnth!==null) ? (retEnth - supEnth) : null;
+  const tesp = (supStatic!==null && retStatic!==null) ? (supStatic - retStatic) : null;
+  const voltRatio = (voltage!==null && ratedVoltage) ? (voltage/ratedVoltage) : null;
+  const ampRatio = (compAmp!==null && compRLA) ? (compAmp/compRLA) : null;
+  const fanAmpRatio = (fanAmp!==null && fanFLA) ? (fanAmp/fanFLA) : null;
+
+  // Running capacitance test: MFD = (Amps × 2652) / Volts, measured across
+  // Common-to-Herm (compressor) or Common-to-Fan while the system runs.
+  const capCompMFD = (capCompAmps!==null && capCompVolts) ? (capCompAmps*2652/capCompVolts) : null;
+  const capFanMFD = (capFanAmps!==null && capFanVolts) ? (capFanAmps*2652/capFanVolts) : null;
+  const capCompDevPct = (capCompMFD!==null && capCompRated) ? ((capCompMFD-capCompRated)/capCompRated*100) : null;
+  const capFanDevPct = (capFanMFD!==null && capFanRated) ? ((capFanMFD-capFanRated)/capFanRated*100) : null;
+
+  function renderCapReadout(elId, measured, rated, devPct){
+    const el = document.getElementById(elId);
+    if (measured === null){ el.className='cap-readout empty'; el.textContent='Enter amps and volts to calculate measured µF.'; return; }
+    if (rated === null){
+      el.className='cap-readout';
+      el.innerHTML = 'Measured: <b>'+measured.toFixed(1)+' µF</b> — enter the rated µF to compare against tolerance.';
+      return;
+    }
+    const status = Math.abs(devPct) > capTolerance ? (devPct<0?'low':'high') : 'normal';
+    el.className='cap-readout';
+    el.innerHTML = 'Measured: <b>'+measured.toFixed(1)+' µF</b> vs rated <b>'+rated.toFixed(1)+' µF</b> ('+(devPct>=0?'+':'')+devPct.toFixed(1)+'%) <span class="chip '+chipClass(status)+'">'+status.toUpperCase()+'</span>';
+  }
+  renderCapReadout('capCompReadout', capCompMFD, capCompRated, capCompDevPct);
+  renderCapReadout('capFanReadout', capFanMFD, capFanRated, capFanDevPct);
+
+  const shValue = document.getElementById('shValue');
+  const shMeta = document.getElementById('shMeta');
+  let shStatus = 'na';
+  if (actualSH !== null){
+    const d = actualSH - targetSH;
+    shStatus = d <= -4 ? 'low' : (d >= 4 ? 'high' : 'normal');
+    shValue.innerHTML = actualSH.toFixed(1) + ' °F <span class="chip '+chipClass(shStatus)+'">'+shStatus.toUpperCase()+'</span>';
+    shMeta.textContent = 'target ≈ ' + targetSH + '°F';
+  } else {
+    shValue.innerHTML = '— °F <span class="chip na">NO DATA</span>';
+    shMeta.textContent = 'from probe';
+  }
+
+  const scValue = document.getElementById('scValue');
+  const scMeta = document.getElementById('scMeta');
+  let scStatus = 'na';
+  if (actualSC !== null){
+    const d = actualSC - targetSC;
+    scStatus = d <= -3 ? 'low' : (d >= 3 ? 'high' : 'normal');
+    scValue.innerHTML = actualSC.toFixed(1) + ' °F <span class="chip '+chipClass(scStatus)+'">'+scStatus.toUpperCase()+'</span>';
+    scMeta.textContent = 'target ≈ ' + targetSC + '°F';
+  } else {
+    scValue.innerHTML = '— °F <span class="chip na">NO DATA</span>';
+    scMeta.textContent = 'from probe';
+  }
+
+  document.getElementById('dtValue').textContent = (deltaT!==null ? deltaT.toFixed(1) : '—') + ' °F';
+  document.getElementById('edValue').textContent = (enthalpyDrop!==null ? enthalpyDrop.toFixed(1) + ' Btu/lb' : '—');
+
+  const tespValue = document.getElementById('tespValue');
+  const tespMeta = document.getElementById('tespMeta');
+  let tespRatio = null, tespStatus = 'na';
+  if (tesp !== null){
+    tespRatio = tesp / targetStatic;
+    tespStatus = tespRatio > 1.3 ? 'high' : (tespRatio < 0.7 ? 'low' : 'normal');
+    tespValue.innerHTML = tesp.toFixed(2) + ' in. w.c. <span class="chip '+chipClass(tespStatus)+'">'+tespStatus.toUpperCase()+'</span>';
+    tespMeta.textContent = 'rated ≈ ' + targetStatic.toFixed(2) + ' in. w.c.';
+  } else {
+    tespValue.innerHTML = '— in. w.c. <span class="chip na">NO DATA</span>';
+    tespMeta.textContent = 'supply static − return static';
+  }
+
+  const diagContent = document.getElementById('diagContent');
+  if (actualSH === null || actualSC === null){
+    diagContent.innerHTML = '<div class="empty-state">Enter actual superheat and actual subcooling (plus outdoor ambient) to run the diagnosis. Air side readings sharpen the airflow-related findings.</div>';
+    return;
+  }
+
+  const fmt = n => (n===null||n===undefined) ? '—' : n.toFixed(1);
+  const clamp = (n,a,b) => Math.max(a,Math.min(b,n));
+  const findings = [];
+  const flags = [];
+
+  if (vaporSat !== null && vaporSat < 25){
+    flags.push('Vapor saturation is ' + vaporSat.toFixed(1) + '°F — below freezing. Risk of evaporator icing if this persists; verify airflow and charge before running the system further.');
+  }
+
+  let splitStatus = deltaT !== null ? (deltaT > 23 ? 'high' : (deltaT < 14 ? 'low' : 'normal')) : null;
+  let headSplit = (liquidSat !== null && ambient !== null) ? (liquidSat - ambient) : null;
+  let lowCapacity = enthalpyDrop !== null && enthalpyDrop < 8;
+
+  // Every rule below scores itself by how far the actual readings sit past
+  // its own trigger threshold — a bigger overshoot means a stronger match,
+  // not just a match. That score (0-100) is what determines rank, not the
+  // order the rules happen to run in.
+
+  if (shStatus === 'high' && scStatus !== 'high'){
+    const shOver = actualSH - targetSH;
+    const scPull = scStatus === 'low' ? (targetSC - actualSC) : 0;
+    const lowAmp = ampRatio !== null && ampRatio < 0.85;
+    const score = clamp(38 + shOver*2.2 + scPull*1.8 + (lowCapacity?8:0) + (lowAmp?6:0), 0, 100);
+    findings.push({
+      cat: 'refrigerant', id: 'undercharge', title: 'Low Refrigerant Charge (Undercharge)', score,
+      detail: 'Superheat is running <b>'+fmt(actualSH)+'°F</b> against a target of about '+targetSH+'°F, while subcooling is '+scStatus+' at <b>'+fmt(actualSC)+'°F</b>. That combination — hot, dry vapor coming back to the compressor without a matching rise in subcooling — is the classic signature of a system that\'s short on refrigerant.'
+        + (lowCapacity ? ' The enthalpy drop across the coil ('+fmt(enthalpyDrop)+' Btu/lb) is also low, consistent with reduced cooling capacity from an undercharged system.' : '')
+        + (lowAmp ? ' Compressor amp draw is running under RLA too ('+fmt(compAmp)+'A vs. '+fmt(compRLA)+'A rated), which fits a compressor that\'s pumping less refrigerant than it should.' : '')
+    });
+  }
+
+  if (shStatus === 'low' && scStatus === 'high'){
+    const shUnder = targetSH - actualSH;
+    const scOver = actualSC - targetSC;
+    const score = clamp(38 + shUnder*2.2 + scOver*2.2, 0, 100);
+    findings.push({
+      cat: 'refrigerant', id: 'overcharge', title: 'Overcharged System', score,
+      detail: 'Low superheat (<b>'+fmt(actualSH)+'°F</b>) paired with high subcooling (<b>'+fmt(actualSC)+'°F</b> vs. a ~'+targetSC+'°F target) points to too much refrigerant in the system. Excess liquid is flooding the evaporator and backing up in the condenser.'
+    });
+  }
+
+  if (shStatus === 'high' && scStatus === 'high'){
+    const shOver = actualSH - targetSH;
+    const scOver = actualSC - targetSC;
+    const score = clamp(38 + shOver*1.6 + scOver*1.6, 0, 100);
+    findings.push({
+      cat: 'refrigerant', id: 'restriction', title: 'Restriction in the Liquid Line or Metering Device', score,
+      detail: 'Both readings are elevated — superheat <b>'+fmt(actualSH)+'°F</b> and subcooling <b>'+fmt(actualSC)+'°F</b>. High subcooling means liquid is backing up before it reaches the metering device (clogged filter-drier, kinked line, or a partially blocked TXV/orifice), while high superheat shows the evaporator downstream isn\'t getting enough refrigerant. Check the filter-drier and liquid line for a cold spot or frost right at the restriction.'
+    });
+  }
+
+  if (shStatus === 'low' && scStatus !== 'high'){
+    const shUnder = targetSH - actualSH;
+    const score = clamp(26 + shUnder*2, 0, 100);
+    findings.push({
+      cat: 'refrigerant', id: 'overfeed', title: 'Metering Device Overfeeding', score,
+      detail: 'Superheat is low ('+fmt(actualSH)+'°F) without the high subcooling you\'d expect from a straight overcharge. That leans toward the metering device feeding too much liquid — a TXV stuck open or losing its bulb charge, or an oversized fixed orifice for this system.'
+    });
+  }
+
+  // Not a hard cutoff — pressure climbing into the danger zone is already
+  // worth flagging before it technically crosses the ceiling. Score ramps
+  // up starting at 85% of the ceiling and maxes out around 15% past it.
+  const ceiling = VERY_HIGH_LIQUID_PSIG[refrigerant];
+  const approachStart = ceiling ? ceiling * 0.85 : null;
+  const pastApproach = (liquidP !== null && approachStart !== null) ? (liquidP - approachStart) : null;
+  const overCeiling = (liquidP !== null && ceiling) ? (liquidP - ceiling) : null;
+
+  if ((headSplit !== null && headSplit > 38 || pastApproach !== null && pastApproach > 0) && shStatus !== 'low'){
+    const splitScore = headSplit !== null ? clamp(26 + (headSplit-38)*1.7, 0, 100) : 0;
+    const ceilingScore = pastApproach !== null ? clamp(pastApproach / (ceiling*0.3) * 100, 0, 100) : 0;
+    const highFanAmp = fanAmpRatio !== null && fanAmpRatio > 1.1;
+    const score = clamp(Math.max(splitScore, ceilingScore) + (highFanAmp?8:0), 0, 100);
+    let detail = '';
+    if (overCeiling !== null && overCeiling > 0){
+      detail += 'Liquid pressure is <b>'+liquidP.toFixed(1)+' psig</b> — above the ~'+ceiling+' psig range where head pressure alone tells you something\'s wrong before you even factor in ambient. ';
+    } else if (pastApproach !== null && pastApproach > 0){
+      detail += 'Liquid pressure is <b>'+liquidP.toFixed(1)+' psig</b> — climbing into the range near '+ceiling+' psig where it\'s worth checking the condenser even before the reading technically crosses a line. ';
+    }
+    if (headSplit !== null){
+      detail += 'Liquid saturation is running <b>'+headSplit.toFixed(1)+'°F above outdoor ambient</b> (normal is roughly 20–35°F over ambient). ';
+    }
+    if (highFanAmp){
+      detail += 'The condenser fan is also drawing <b>'+fmt(fanAmp)+'A</b> against a rated '+fmt(fanFLA)+'A FLA — a motor working harder than it should is consistent with a coil that\'s fighting for airflow, or a fan motor on its way out. ';
+    }
+    detail += 'Start with the outdoor coil and airflow: check for a dirty or blocked condenser coil, a failing condenser fan motor, restricted airflow around the unit, or bent/crushed fins before assuming it\'s a charge issue.';
+    findings.push({ cat: 'airflow', id: 'condenser', title: 'Poor Condenser Heat Rejection', score, detail });
+  }
+
+  const staticStartsAt = 1.1;   // ratio to rated static where it starts counting
+  const staticMaxAt = 1.7;      // ratio where it's fully maxed out
+  const tespOver = tespRatio !== null ? (tespRatio - staticStartsAt) : null;
+
+  if (shStatus !== 'high' && (splitStatus === 'high' || (tespOver !== null && tespOver > 0))){
+    const deltaTScore = splitStatus === 'high' ? clamp(26 + (deltaT-23)*2.3 + (lowCapacity?10:0), 0, 100) : 0;
+    const tespScore = tespOver !== null && tespOver > 0 ? clamp(tespOver / (staticMaxAt-staticStartsAt) * 100, 0, 100) : 0;
+    const score = clamp(Math.max(deltaTScore, tespScore), 0, 100);
+    let detail = '';
+    if (tespOver !== null && tespOver > 0){
+      detail += 'Total external static is <b>'+tesp.toFixed(2)+' in. w.c.</b> against a rated static of '+targetStatic.toFixed(2)+' — that\'s '+(tespRatio*100).toFixed(0)+'% of rated, which is the most direct sign of a restricted duct system. ';
+    }
+    if (splitStatus === 'high'){
+      detail += 'The return-to-supply delta T is <b>'+fmt(deltaT)+'°F</b>, above the normal 16–22°F range. ';
+    }
+    detail += 'A coil or duct system starved for air pulls heat from a smaller volume — check for a dirty filter, dirty evaporator coil, closed or blocked registers, undersized ductwork, or a weak blower.'
+      + (lowCapacity ? ' Total capacity also looks low (enthalpy drop '+fmt(enthalpyDrop)+' Btu/lb), which fits reduced airflow across the coil.' : '');
+    findings.push({ cat: 'airflow', id: 'airflow', title: 'Restricted Indoor Airflow', score, detail });
+  }
+
+  if (tespRatio !== null && tespRatio < 0.7 && shStatus !== 'high'){
+    const score = clamp(18 + (0.7-tespRatio)*80, 0, 100);
+    findings.push({
+      cat: 'airflow', id: 'ductleak', title: 'Duct Leakage or Oversized Return/Filter Grille', score,
+      detail: 'Total external static is only <b>'+tesp.toFixed(2)+' in. w.c.</b> against a rated static of '+targetStatic.toFixed(2)+' — well under what the system is designed to work against. That usually points to air-side losses rather than a refrigerant problem: leaky supply or return ducts, a return grille or filter that\'s oversized for the system, or missing duct sections bleeding air before it reaches the registers.'
+    });
+  }
+
+  if (headSplit !== null && headSplit < 12 && vaporSat !== null && vaporSat > 45){
+    const score = clamp(18 + (12-headSplit)*2, 0, 100);
+    findings.push({
+      cat: 'refrigerant', id: 'compressor', title: 'Weak or Failing Compressor', score,
+      detail: 'Head pressure is low relative to ambient (only '+headSplit.toFixed(1)+'°F of condensing split) while the suction side is running high, meaning the low and high sides are closer together than they should be — a pattern that shows up with worn compressor valves or reduced pumping capacity.'
+    });
+  }
+
+  if (headSplit !== null && headSplit > 30 && scStatus === 'normal' && shStatus === 'normal'){
+    const score = clamp(14 + (headSplit-30)*1.1, 0, 100);
+    findings.push({
+      cat: 'refrigerant', id: 'noncondensables', title: 'Possible Non-Condensables (Air/Moisture) in the System', score,
+      detail: 'Head pressure runs a bit high relative to ambient even though superheat and subcooling both look reasonably normal. Air or moisture trapped in the system can raise pressures without following the usual charge-related pattern.'
+    });
+  }
+
+  if (supRH !== null && supRH > 75 && splitStatus !== 'low'){
+    const score = clamp(14 + (supRH-75)*0.6, 0, 100);
+    findings.push({
+      cat: 'airflow', id: 'humidity', title: 'Weak Latent Removal (High Supply Humidity)', score,
+      detail: 'Supply air relative humidity is <b>'+fmt(supRH)+'%</b>, higher than you\'d want to see leaving the coil. Short cycling, oversized equipment, or excess airflow across the coil can all limit dehumidification even when sensible cooling looks fine.'
+    });
+  }
+
+  // Voltage and amp draw are electrical checks, not refrigerant-cycle
+  // checks — they can explain symptoms that otherwise look like a charge
+  // problem, so they're scored independently rather than folded into the
+  // refrigerant-side rules above.
+  let voltFlag = null;
+  if (voltRatio !== null){
+    if (voltRatio < 0.95){
+      const score = clamp((0.95-voltRatio)/(0.95-0.85)*100, 0, 100);
+      voltFlag = 'low';
+      findings.push({
+        cat: 'electrical', id: 'voltage_low', title: 'Low Supply Voltage', score,
+        detail: 'Line voltage measured <b>'+fmt(voltage)+'V</b> against a rated <b>'+fmt(ratedVoltage)+'V</b> — that\'s '+(voltRatio*100).toFixed(0)+'% of rated, outside the normal ±10% motor tolerance. Low voltage makes every motor in the system pull more current to do the same work, can cause nuisance overloads or short-cycling, and should be checked (loose connections, undersized wire, utility supply) before chasing a refrigerant-side cause.'
+      });
+    } else if (voltRatio > 1.05){
+      const score = clamp((voltRatio-1.05)/(1.15-1.05)*100, 0, 100);
+      voltFlag = 'high';
+      findings.push({
+        cat: 'electrical', id: 'voltage_high', title: 'High Supply Voltage', score,
+        detail: 'Line voltage measured <b>'+fmt(voltage)+'V</b> against a rated <b>'+fmt(ratedVoltage)+'V</b> — that\'s '+(voltRatio*100).toFixed(0)+'% of rated, outside the normal ±10% motor tolerance. Sustained overvoltage stresses motor windings and controls over time — worth a call to the utility or an electrician if it\'s consistent.'
+      });
+    }
+  }
+
+  if (ampRatio !== null && ampRatio > 1.1){
+    const capBad = capCompDevPct !== null && Math.abs(capCompDevPct) > capTolerance;
+    const score = clamp((ampRatio-1.1)/(1.4-1.1)*100 + (capBad?10:0), 0, 100);
+    findings.push({
+      cat: 'electrical', id: 'amp_high', title: 'High Compressor Amp Draw', score,
+      detail: 'Compressor is pulling <b>'+fmt(compAmp)+'A</b> against a rated <b>'+fmt(compRLA)+'A</b> RLA — running '+(ampRatio*100).toFixed(0)+'% of rated load.'
+        + (voltFlag === 'low' ? ' With line voltage also reading low, that\'s the more likely explanation here — a motor pulls more amps to make up for lower voltage.' : capBad ? ' The run capacitor is testing outside tolerance too ('+capCompMFD.toFixed(1)+' µF vs '+capCompRated.toFixed(1)+' µF rated) — that\'s very likely the cause.' : ' Check for a weak run capacitor, high head pressure forcing the compressor to work harder, or a mechanical issue in the compressor itself.')
+    });
+  }
+
+  // Running capacitance test — MFD = (Amps × 2652) / Volts, per side. A
+  // capacitor that's lost capacitance is one of the most common, cheapest
+  // fixes behind a weak-running or hard-starting compressor or fan motor.
+  if (capCompDevPct !== null && Math.abs(capCompDevPct) > capTolerance){
+    const over = Math.abs(capCompDevPct) - capTolerance;
+    const score = clamp(30 + over*3, 0, 100);
+    const dir = capCompDevPct < 0 ? 'reading low' : 'reading high';
+    findings.push({
+      cat: 'electrical', id: 'cap_comp', title: 'Compressor Run Capacitor Out of Tolerance', score,
+      detail: 'Measured capacitance on the compressor (Common-to-Herm) side works out to <b>'+capCompMFD.toFixed(1)+' µF</b> against a rated <b>'+capCompRated.toFixed(1)+' µF</b> — that\'s '+Math.abs(capCompDevPct).toFixed(1)+'% off, outside your ±'+capTolerance+'% allowance ('+dir+').'
+        + (capCompDevPct < 0 ? ' A capacitor reading low is the far more common case — it\'s slowly losing capacitance with age and heat, which shows up as a hard-starting or harder-running compressor.' : ' A capacitor reading high usually means the wrong replacement value was installed at some point.')
+    });
+  }
+
+  if (capFanDevPct !== null && Math.abs(capFanDevPct) > capTolerance){
+    const over = Math.abs(capFanDevPct) - capTolerance;
+    const score = clamp(26 + over*3, 0, 100);
+    const dir = capFanDevPct < 0 ? 'reading low' : 'reading high';
+    findings.push({
+      cat: 'electrical', id: 'cap_fan', title: 'Condenser Fan Run Capacitor Out of Tolerance', score,
+      detail: 'Measured capacitance on the condenser fan (Common-to-Fan) side works out to <b>'+capFanMFD.toFixed(1)+' µF</b> against a rated <b>'+capFanRated.toFixed(1)+' µF</b> — that\'s '+Math.abs(capFanDevPct).toFixed(1)+'% off, outside your ±'+capTolerance+'% allowance ('+dir+').'
+        + (capFanDevPct < 0 ? ' A weak fan capacitor often shows up as a fan that spins slowly, hums without starting, or struggles to reach full speed — which reduces condenser airflow the same way a dirty coil does.' : ' A capacitor reading high usually means the wrong replacement value was installed at some point.')
+    });
+  }
+
+  if (findings.length === 0){
+    findings.push({
+      title: 'Readings Appear Within Normal Operating Range', score: 0, normal: true,
+      detail: 'Superheat ('+fmt(actualSH)+'°F) and subcooling ('+fmt(actualSC)+'°F) are both close to target, and no other flags were triggered. If the complaint persists, look outside the refrigerant circuit (thermostat, controls, ductwork).'
+    });
+  }
+
+  // Second pass: fold in whatever the tech has answered so far. This runs
+  // every time (including right after a question is answered) so the
+  // ranking always reflects readings + answers together, not readings alone.
+  findings.forEach(f=>{
+    if (f.normal) return;
+    const qs = QUESTION_BANK[f.id] || [];
+    f.appliedNotes = [];
+    qs.forEach(q=>{
+      const ans = questionAnswers[q.id];
+      if (ans === 'yes' && q.yesNote){
+        f.score = clamp(f.score + q.yesEffect, 0, 100);
+        f.appliedNotes.push({ ans:'yes', text:q.yesNote });
+      } else if (ans === 'no' && q.noNote){
+        f.score = clamp(f.score + q.noEffect, 0, 100);
+        f.appliedNotes.push({ ans:'no', text:q.noNote });
+      }
+    });
+  });
+
+  // EAR — Electrical, Airflow, Refrigerant, in that order. This is the
+  // real-world check sequence every finding above is subject to: an
+  // electrical fault can cause misleading airflow and refrigerant
+  // symptoms, and refrigerant readings (superheat/subcooling) only mean
+  // what they're supposed to mean once airflow across the coil is
+  // confirmed correct. Score gets a light EAR-order nudge so close ties
+  // resolve in check-this-first order, and refrigerant/airflow findings
+  // get a direct caveat when an earlier letter hasn't been cleared yet.
+  const EAR_ORDER = { electrical: 2, airflow: 1, refrigerant: 0 };
+  const electricalActive = findings.some(f=>f.cat==='electrical' && f.score>=35);
+  const airflowActive = findings.some(f=>f.cat==='airflow' && f.score>=35);
+  const airflowChecked = deltaT !== null || tesp !== null;
+  const airflowConfirmedGood = airflowChecked && !airflowActive;
+
+  findings.forEach(f=>{
+    if (f.normal) return;
+    f.score = clamp(f.score + (EAR_ORDER[f.cat]||0)*4, 0, 100);
+    f.earNote = null;
+    if (f.cat === 'refrigerant' && !airflowConfirmedGood){
+      f.earNote = airflowActive
+        ? 'Airflow is already flagged above — a restricted coil or duct system throws off superheat and subcooling on its own. Resolve that first, then recheck this reading.'
+        : 'Airflow hasn\'t been confirmed yet (no delta T or static pressure entered) — a bad superheat/subcooling reading can just mean bad airflow, not bad charge. Confirm airflow before trusting this one.';
+    } else if ((f.cat === 'refrigerant' || f.cat === 'airflow') && electricalActive){
+      f.earNote = 'An electrical issue is flagged above — electrical problems can cause misleading airflow and refrigerant symptoms downstream. Worth resolving that first.';
+    }
+  });
+
+  findings.sort((a,b) => (b.score||0) - (a.score||0));
+  const ranked = findings.slice(0,5);
+
+  let html = '';
+  flags.forEach(f=>{ html += '<div class="flag-row">⚠ '+f+'</div>'; });
+  ranked.forEach((f,i)=>{
+    let confLabel, confClass;
+    if (f.normal){ confLabel='NORMAL'; confClass='norm-c'; }
+    else if (f.score >= 65){ confLabel='LIKELY'; confClass='high-c'; }
+    else if (f.score >= 35){ confLabel='POSSIBLE'; confClass='med-c'; }
+    else { confLabel='WORTH CHECKING'; confClass='low-c'; }
+    const badgeLabel = f.normal ? '✓' : String(i+1);
+    const catLetter = { electrical:'E', airflow:'A', refrigerant:'R' }[f.cat];
+    const catBadge = catLetter ? '<span class="ear-badge ear-'+f.cat+'" title="EAR category: '+f.cat+'">'+catLetter+'</span>' : '';
+    let notesHtml = '';
+    (f.appliedNotes||[]).forEach(n=>{
+      notesHtml += '<div class="applied-note '+n.ans+'">'+(n.ans==='yes'?'✓':'✗')+' '+n.text+'</div>';
+    });
+    const earHtml = f.earNote ? '<div class="ear-note">↳ EAR: '+f.earNote+'</div>' : '';
+    html += '<div class="finding'+(f.normal?' normal-op':'')+'">'
+      + '<div class="rank-badge '+confClass+'">'+badgeLabel+'</div>'
+      + '<div class="finding-body">'
+      +   '<div class="finding-top">'+catBadge+'<div class="finding-title">'+f.title+(!f.normal && i===0 ? ' — check this first' : '')+'</div><div class="conf '+confClass+'">'+confLabel+'</div></div>'
+      +   '<div class="finding-detail">'+f.detail+'</div>'
+      +   notesHtml
+      +   earHtml
+      + '</div></div>';
+  });
+  diagContent.innerHTML = html;
+
+  // Build the follow-up question set from whichever findings are currently
+  // ranked at the top — as answers come in and the ranking shifts, the
+  // question list naturally follows it. Once a question is answered it
+  // drops off this list for good; its answer lives on as the reasoning
+  // note on the finding card instead, so nothing gets asked twice.
+  const refineContent = document.getElementById('refineContent');
+  const refineSection = document.getElementById('refineSection');
+  const topReal = ranked.filter(f=>!f.normal).slice(0,3);
+  let qHtml = '';
+  let candidateCount = 0;
+  topReal.forEach(f=>{
+    const qs = QUESTION_BANK[f.id] || [];
+    qs.forEach(q=>{
+      candidateCount++;
+      if (questionAnswers[q.id] !== undefined) return; // already answered — skip
+      qHtml += '<div class="q-row">'
+        + '<div class="q-context">For: <b>'+f.title+'</b></div>'
+        + '<div class="q-text">'+q.text+'</div>'
+        + '<div class="q-buttons">'
+        +   '<button type="button" class="q-btn" data-q="'+q.id+'" data-ans="yes">Yes</button>'
+        +   '<button type="button" class="q-btn" data-q="'+q.id+'" data-ans="no">No</button>'
+        + '</div></div>';
+    });
+  });
+  if (qHtml){
+    refineSection.hidden = false;
+    refineContent.innerHTML = qHtml;
+  } else if (candidateCount > 0){
+    refineSection.hidden = false;
+    refineContent.innerHTML = '<div class="empty-state">You\'ve answered everything available for the current top matches — check the reasoning on the cards above.</div>';
+  } else {
+    refineSection.hidden = true;
+  }
+}
+
+document.getElementById('refineContent').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.q-btn');
+  if (!btn) return;
+  questionAnswers[btn.dataset.q] = btn.dataset.ans;
+  run();
+});
+
+document.getElementById('clearAnswers').addEventListener('click', ()=>{
+  questionAnswers = {};
+  run();
+});
+
+// ---- Current Weather Lookup ----
+// The one feature in this app that leans on the internet for something
+// other than OCR: pulls actual current outdoor temperature from a free,
+// keyless public API (Open-Meteo) using the phone's location, rather than
+// the tech having to know or guess ambient temp. Fully optional — nothing
+// else in the app requires this to work.
+function initWeatherLookup(){
+  const btn = document.getElementById('weatherBtn');
+  const status = document.getElementById('weatherStatus');
+  const ambientEl = document.getElementById('ambient');
+
+  btn.addEventListener('click', ()=>{
+    if (!navigator.geolocation){
+      status.textContent = 'Location isn\'t available on this device — enter ambient manually.';
+      return;
+    }
+    status.textContent = 'Getting location…';
+    navigator.geolocation.getCurrentPosition(async (pos)=>{
+      const { latitude, longitude } = pos.coords;
+      status.textContent = 'Fetching current temperature…';
+      const timeout = new Promise((_, reject)=> setTimeout(()=>reject(new Error('timeout')), 10000));
+      try {
+        const url = 'https://api.open-meteo.com/v1/forecast?latitude='+latitude+'&longitude='+longitude+'&current=temperature_2m&temperature_unit=fahrenheit';
+        const res = await Promise.race([fetch(url), timeout]);
+        const data = await res.json();
+        const temp = data && data.current ? data.current.temperature_2m : null;
+        if (temp !== null && temp !== undefined){
+          ambientEl.value = Math.round(temp * 10) / 10;
+          ambientEl.classList.add('scanned');
+          status.textContent = 'Filled from current weather at your location.';
+        } else {
+          status.textContent = 'Couldn\'t read a temperature back from the weather service — enter it manually.';
+        }
+      } catch(err){
+        status.textContent = 'Weather lookup failed (offline, or the service didn\'t respond) — enter ambient manually.';
+      }
+    }, ()=>{
+      status.textContent = 'Location permission denied — enter ambient manually.';
+    }, { timeout: 10000 });
+  });
+}
+initWeatherLookup();
+
+run();
+</script>
+</body>
+</html>
