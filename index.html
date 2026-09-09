@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MANIFOLD — Field Diagnostic Reference</title>
+<title>QuickDiag — Field Diagnostic Reference</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -250,7 +250,7 @@
 
   <div class="nameplate">
     <div class="nameplate-top">
-      <h1>MANIFOLD</h1>
+      <h1>QUICKDIAG</h1>
       <span class="tag">FIELD DIAGNOSTIC REFERENCE</span>
     </div>
     <p>Punch in the readings straight off your Job Link probes — refrigerant side and air side — and get a ranked list of likely causes with the reasoning behind each.</p>
@@ -1213,7 +1213,7 @@ function wizRenderStep(){
     if (step.showPkgTip){
       const tip = document.getElementById('pkgTip');
       if (tip) { card.appendChild(tip); pkgTipSync(); }
-      else console.error('MANIFOLD: pkgTip element not found — package unit tip will be missing on this step.');
+      else console.error('QUICKDIAG: pkgTip element not found — package unit tip will be missing on this step.');
     }
   }
 
@@ -1231,11 +1231,11 @@ function wizRenderStep(){
     actions.className = 'wiz-intro-actions';
     if (step.scanBtn){
       const el = document.getElementById('scanBtn');
-      if (el) actions.appendChild(el); else console.error('MANIFOLD: scanBtn element not found.');
+      if (el) actions.appendChild(el); else console.error('QUICKDIAG: scanBtn element not found.');
     }
     if (step.jobLinkBtn){
       const el = document.getElementById('jobLinkScanRow');
-      if (el) actions.appendChild(el); else console.error('MANIFOLD: jobLinkScanRow element not found.');
+      if (el) actions.appendChild(el); else console.error('QUICKDIAG: jobLinkScanRow element not found.');
     }
     card.appendChild(actions);
 
@@ -1255,11 +1255,11 @@ function wizRenderStep(){
       card.appendChild(groupTag);
     }
     const input = document.getElementById(step.id);
-    if (!input) { console.error('MANIFOLD: field element not found for step id', step.id); return; }
+    if (!input) { console.error('QUICKDIAG: field element not found for step id', step.id); return; }
     const field = input.closest('.field');
     const slot = document.createElement('div');
     slot.className = 'wiz-field-slot';
-    if (field) slot.appendChild(field); else console.error('MANIFOLD: .field wrapper not found for', step.id);
+    if (field) slot.appendChild(field); else console.error('QUICKDIAG: .field wrapper not found for', step.id);
     card.appendChild(slot);
   }
 
@@ -1315,7 +1315,7 @@ function wizFinish(){
     // throws, still surface the results section and show what went
     // wrong instead of the browser's default uncaught-error behavior,
     // and log the real error to the console for debugging.
-    console.error('MANIFOLD wizFinish error:', err);
+    console.error('QUICKDIAG wizFinish error:', err);
     try {
       document.getElementById('wizard').style.display = 'none';
       document.getElementById('resultsSection').style.display = 'block';
@@ -1324,7 +1324,7 @@ function wizFinish(){
         diag.innerHTML = '<div class="empty-state">Something went wrong finishing up ('+(err && err.message ? err.message : 'unknown error')+'). Try "Start Over" below, or reload the page — your readings may need to be re-entered. If this keeps happening, note what step you were on and what you\'d just done (scan, weather lookup, review/edit) when it happened.</div>';
       }
     } catch(err2){
-      console.error('MANIFOLD wizFinish recovery also failed:', err2);
+      console.error('QUICKDIAG wizFinish recovery also failed:', err2);
     }
   }
 }
@@ -1354,7 +1354,7 @@ document.getElementById('wizNext').addEventListener('click', ()=>{
   } catch(err){
     // This is the exact failure mode a tech would see as "I tapped Next
     // and nothing happened" — log it and say so instead of staying silent.
-    console.error('MANIFOLD wizNext error:', err);
+    console.error('QUICKDIAG wizNext error:', err);
     alert('Something went wrong (' + (err && err.message ? err.message : 'unknown error') + '). Try tapping Next again, or Start Over if it keeps happening.');
   }
 });
