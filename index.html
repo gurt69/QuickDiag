@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QUICKDIAG — Field Diagnostic Reference</title>
+<title>MANIFOLD — Field Diagnostic Reference</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -1143,6 +1143,8 @@ function wizResetMoved(){
   if (scanBtn && scanBtn.parentElement !== home) home.appendChild(scanBtn);
   const jobLinkRow = document.getElementById('jobLinkScanRow');
   if (jobLinkRow && jobLinkRow.parentElement !== home) home.appendChild(jobLinkRow);
+  const pkgTip = document.getElementById('pkgTip');
+  if (pkgTip && pkgTip.parentElement !== home) home.appendChild(pkgTip);
 }
 
 function wizRenderProgress(){
@@ -1197,8 +1199,8 @@ function wizRenderStep(){
 
     if (step.showPkgTip){
       const tip = document.getElementById('pkgTip');
-      card.appendChild(tip);
-      pkgTipSync();
+      if (tip) { card.appendChild(tip); pkgTipSync(); }
+      else console.error('MANIFOLD: pkgTip element not found — package unit tip will be missing on this step.');
     }
   }
 
@@ -1214,8 +1216,14 @@ function wizRenderStep(){
 
     const actions = document.createElement('div');
     actions.className = 'wiz-intro-actions';
-    if (step.scanBtn) actions.appendChild(document.getElementById('scanBtn'));
-    if (step.jobLinkBtn) actions.appendChild(document.getElementById('jobLinkScanRow'));
+    if (step.scanBtn){
+      const el = document.getElementById('scanBtn');
+      if (el) actions.appendChild(el); else console.error('MANIFOLD: scanBtn element not found.');
+    }
+    if (step.jobLinkBtn){
+      const el = document.getElementById('jobLinkScanRow');
+      if (el) actions.appendChild(el); else console.error('MANIFOLD: jobLinkScanRow element not found.');
+    }
     card.appendChild(actions);
 
     if (step.scanBtn || step.jobLinkBtn){
@@ -1234,10 +1242,11 @@ function wizRenderStep(){
       card.appendChild(groupTag);
     }
     const input = document.getElementById(step.id);
+    if (!input) { console.error('MANIFOLD: field element not found for step id', step.id); return; }
     const field = input.closest('.field');
     const slot = document.createElement('div');
     slot.className = 'wiz-field-slot';
-    slot.appendChild(field);
+    if (field) slot.appendChild(field); else console.error('MANIFOLD: .field wrapper not found for', step.id);
     card.appendChild(slot);
   }
 
