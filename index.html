@@ -88,9 +88,6 @@
   .cap-panel{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin:16px 16px 0;}
   .cap-panel .side-head{padding:10px 16px;font-family:'Oswald',sans-serif;font-weight:600;font-size:13px;letter-spacing:0.07em;color:#f1c40f;background:#1a1a1a;}
   .cap-panel .body{padding:16px;}
-  .dual-rating{display:flex;align-items:center;gap:8px;max-width:180px;}
-  .dual-rating input{text-align:center;}
-  .dual-rating-slash{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:16px;color:var(--ink-soft);}
   .cap-subhead{font-family:'Oswald',sans-serif;font-weight:600;font-size:12px;letter-spacing:0.05em;color:var(--ink-soft);margin:18px 0 8px;padding-top:14px;border-top:1px solid var(--line);}
   .cap-subhead:first-of-type{padding-top:0;border-top:none;}
   .cap-subhead .sub{font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:10px;color:#8b9298;margin-left:6px;}
@@ -463,27 +460,34 @@
   <div class="section-label accent-elec">CAPACITOR TEST <span style="font-weight:400;text-transform:none;letter-spacing:0;font-family:'IBM Plex Mono',monospace;font-size:10.5px;">(running, in-circuit)</span></div>
   <div class="diagnosis-sub" style="margin:0 16px 8px;">Clamp amps and read volts across Common-to-Herm (compressor) or Common-to-Fan, with the system running. This works out microfarads for you — <span style="font-family:'IBM Plex Mono',monospace;">µF = (Amps × 2652) ÷ Volts</span> — you don't need to run the math yourself.</div>
   <div class="cap-panel">
-    <div class="side-head">DUAL RUN CAPACITOR</div>
+    <div class="side-head">CAPACITOR TEST</div>
     <div class="hazard-strip"></div>
     <div class="body">
       <div class="field">
-        <label for="capCompRated">Capacitor Rating (µF)</label>
-        <div class="dual-rating">
-          <input type="number" id="capCompRated" placeholder="45">
-          <span class="dual-rating-slash">/</span>
-          <input type="number" id="capFanRated" placeholder="5">
-        </div>
-        <div class="hint">Printed right on the capacitor, e.g. "45/5 MFD 370V" — herm (compressor) side / fan side</div>
+        <label for="fanMotorType">Condenser Fan Motor</label>
+        <select id="fanMotorType">
+          <option value="cap">Capacitor-Driven</option>
+          <option value="ecm">Board-Driven (ECM / Variable Speed) — No Capacitor</option>
+        </select>
+        <div class="hint">Some newer systems run the condenser fan straight off the control board with no capacitor at all — check this before assuming a dual-run cap.</div>
       </div>
 
       <div class="cap-subhead">HERM <span class="sub">COMPRESSOR SIDE</span></div>
+      <div class="field">
+        <label for="capCompRated">Rated (µF)</label>
+        <input type="number" id="capCompRated" placeholder="printed on capacitor, e.g. 45">
+      </div>
       <div class="field-grid tight">
         <div class="field"><label for="capCompAmps">Amps (C–Herm)</label><input type="number" id="capCompAmps" step="0.1" placeholder="measured"></div>
         <div class="field"><label for="capCompVolts">Volts (C–Herm)</label><input type="number" id="capCompVolts" placeholder="measured"></div>
       </div>
       <div class="cap-readout" id="capCompReadout"></div>
 
-      <div class="cap-subhead">FAN</div>
+      <div class="cap-subhead">FAN <span class="sub" id="fanCapSubLabel">CAPACITOR-DRIVEN</span></div>
+      <div class="field">
+        <label for="capFanRated">Rated (µF)</label>
+        <input type="number" id="capFanRated" placeholder="printed on capacitor, e.g. 5">
+      </div>
       <div class="field-grid tight">
         <div class="field"><label for="capFanAmps">Amps (C–Fan)</label><input type="number" id="capFanAmps" step="0.1" placeholder="measured"></div>
         <div class="field"><label for="capFanVolts">Volts (C–Fan)</label><input type="number" id="capFanVolts" placeholder="measured"></div>
@@ -610,9 +614,11 @@ const FIELD_GUIDE = {
   fanAmp: 'The condenser fan motor\'s actual running current, clamped at the motor leads while it\'s running.',
   fanFLA: 'Full Load Amps — the maximum current the condenser fan motor is rated to draw, printed on the motor or equipment nameplate.',
   capTolerance: 'How far off the rated capacitance is still considered acceptable, as a percentage. Most run capacitors are rated ±6%, but check the capacitor\'s own label — some are rated differently.',
-  capCompRated: 'The two numbers printed on the capacitor itself, e.g. "45/5 MFD 370V" — the first (larger) number is herm/compressor side capacitance, the second (smaller) is fan side, both in microfarads (µF). Most residential systems use one dual-rated capacitor for both.',
+  fanMotorType: 'Some condenser fans run off a run capacitor just like the compressor. Others — common on newer, higher-efficiency equipment — are board-driven (ECM/variable-speed), controlled electronically with no capacitor at all. Check the fan motor and its wiring before assuming which one you\'ve got.',
+  capCompRated: 'The compressor side\'s rated capacitance in microfarads (µF), printed on the capacitor — on a dual-rated capacitor labeled like "45/5 MFD 370V" this is usually the larger of the two numbers. If the compressor has its own separate capacitor instead, it\'s whatever\'s printed on that one.',
   capCompAmps: 'Amp draw measured with your clamp meter on the wire between the capacitor\'s COMMON terminal and the HERM (compressor) terminal, with the system running.',
   capCompVolts: 'Voltage measured across the capacitor\'s COMMON and HERM terminals with the system running.',
+  capFanRated: 'The fan side\'s rated capacitance in microfarads (µF) — on a dual-rated capacitor this is usually the smaller of the two numbers (e.g. the "5" in "45/5 MFD 370V"). If the fan has its own separate capacitor, it\'s whatever\'s printed on that one. Not applicable if the fan is board-driven (ECM).',
   capFanAmps: 'Amp draw measured with your clamp meter on the wire between the capacitor\'s COMMON terminal and the FAN terminal, with the system running.',
   capFanVolts: 'Voltage measured across the capacitor\'s COMMON and FAN terminals with the system running.',
   shLabel: 'Superheat compares the suction line temperature to the refrigerant\'s boiling point at that pressure. It\'s one of the two main numbers (with subcooling) used to tell if a system is properly charged and confirm the evaporator isn\'t flooding or starving.',
@@ -995,11 +1001,14 @@ const WIZ_STEPS = [
   { type:'field', id:'fanFLA', phase:'electrical', group:'CONDENSER FAN', groupClass:'grp-elec' },
   { type:'checkpoint', id:'chk_ampFan', phase:'electrical', check:'ampFan' },
   { type:'field', id:'capTolerance', phase:'electrical' },
-  { type:'field', id:'capCompRated', phase:'electrical' },
+  { type:'select', id:'fanMotorType', phase:'electrical', title:'Condenser Fan Motor', desc:'Does the condenser fan run off a capacitor, or is it board-driven (ECM / variable speed) with no capacitor at all?',
+    options:[['cap','Capacitor-Driven'],['ecm','Board-Driven (ECM) — No Capacitor']] },
+  { type:'field', id:'capCompRated', phase:'electrical', group:'CAPACITOR — HERM SIDE', groupClass:'grp-elec' },
   { type:'field', id:'capCompAmps', phase:'electrical', group:'CAPACITOR — HERM SIDE', groupClass:'grp-elec' },
   { type:'field', id:'capCompVolts', phase:'electrical', group:'CAPACITOR — HERM SIDE', groupClass:'grp-elec' },
-  { type:'field', id:'capFanAmps', phase:'electrical', group:'CAPACITOR — FAN SIDE', groupClass:'grp-elec' },
-  { type:'field', id:'capFanVolts', phase:'electrical', group:'CAPACITOR — FAN SIDE', groupClass:'grp-elec' },
+  { type:'field', id:'capFanRated', phase:'electrical', group:'CAPACITOR — FAN SIDE', groupClass:'grp-elec', skipIf:()=> document.getElementById('fanMotorType').value === 'ecm' },
+  { type:'field', id:'capFanAmps', phase:'electrical', group:'CAPACITOR — FAN SIDE', groupClass:'grp-elec', skipIf:()=> document.getElementById('fanMotorType').value === 'ecm' },
+  { type:'field', id:'capFanVolts', phase:'electrical', group:'CAPACITOR — FAN SIDE', groupClass:'grp-elec', skipIf:()=> document.getElementById('fanMotorType').value === 'ecm' },
   { type:'checkpoint', id:'chk_cap', phase:'electrical', check:'capacitor' },
 
   { type:'intro', phase:'airflow', title:'Airflow — second, per EAR', desc:'Refrigerant readings only mean what they\'re supposed to mean once airflow across the coil is confirmed correct — that\'s why this comes before Refrigerant.' },
@@ -1071,18 +1080,20 @@ const WIZ_CHECKS = {
   },
   capacitor(){
     const tol = num('capTolerance') !== null ? num('capTolerance') : 6;
+    const isECM = document.getElementById('fanMotorType').value === 'ecm';
     const cr = num('capCompRated'), ca = num('capCompAmps'), cv = num('capCompVolts');
     const fr = num('capFanRated'), fa = num('capFanAmps'), fv = num('capFanVolts');
     const compMFD = (ca!==null && cv) ? (ca*2652/cv) : null;
     const fanMFD = (fa!==null && fv) ? (fa*2652/fv) : null;
     const compDev = (compMFD!==null && cr) ? ((compMFD-cr)/cr*100) : null;
     const fanDev = (fanMFD!==null && fr) ? ((fanMFD-fr)/fr*100) : null;
-    if (compDev === null && fanDev === null) return { status:'skip', msg:'Not enough info to check yet — amps/volts/rating were left blank.' };
+    const ecmNote = isECM ? ' Fan is board-driven (ECM) — no capacitor to check on that side.' : '';
+    if (compDev === null && fanDev === null) return { status:'skip', msg:'Not enough info to check yet — amps/volts/rating were left blank.'+ecmNote };
     const bad = [];
     if (compDev !== null && Math.abs(compDev) > tol) bad.push('Herm side is '+Math.abs(compDev).toFixed(1)+'% off ('+compMFD.toFixed(1)+' µF vs '+cr.toFixed(1)+' µF rated)');
     if (fanDev !== null && Math.abs(fanDev) > tol) bad.push('Fan side is '+Math.abs(fanDev).toFixed(1)+'% off ('+fanMFD.toFixed(1)+' µF vs '+fr.toFixed(1)+' µF rated)');
-    if (bad.length) return { status:'bad', msg:'Capacitor reading outside your ±'+tol+'% allowance: '+bad.join('; ')+'. A capacitor reading low is the common case — it loses capacitance with age and heat.' };
-    return { status:'good', msg:'Capacitor reading(s) look normal, within ±'+tol+'% of rated.' };
+    if (bad.length) return { status:'bad', msg:'Capacitor reading outside your ±'+tol+'% allowance: '+bad.join('; ')+'. A capacitor reading low is the common case — it loses capacitance with age and heat.'+ecmNote };
+    return { status:'good', msg:'Capacitor reading(s) look normal, within ±'+tol+'% of rated.'+ecmNote };
   },
   static(){
     const target = num('targetStatic') !== null ? num('targetStatic') : 0.5;
@@ -1148,13 +1159,15 @@ function wizResetMoved(){
 }
 
 function wizRenderProgress(){
-  const pct = Math.round((wizIndex / (WIZ_STEPS.length)) * 100);
-  document.getElementById('wizProgressFill').style.width = pct + '%';
   const step = WIZ_STEPS[wizIndex];
-  const phaseSteps = WIZ_STEPS.filter(s=>s.phase===step.phase);
+  const activeSteps = WIZ_STEPS.filter(s=> !isStepSkipped(s));
+  const activePos = activeSteps.indexOf(step);
+  const pct = Math.round(((activePos+1) / activeSteps.length) * 100);
+  document.getElementById('wizProgressFill').style.width = pct + '%';
+  const phaseSteps = activeSteps.filter(s=>s.phase===step.phase);
   const posInPhase = phaseSteps.indexOf(step) + 1;
   document.getElementById('wizProgressLabel').textContent =
-    WIZ_PHASE_LABEL[step.phase] + ' — ' + posInPhase + ' of ' + phaseSteps.length + '  ·  step ' + (wizIndex+1) + ' of ' + WIZ_STEPS.length;
+    WIZ_PHASE_LABEL[step.phase] + ' — ' + posInPhase + ' of ' + phaseSteps.length + '  ·  step ' + (activePos+1) + ' of ' + activeSteps.length;
 }
 
 function wizRenderStep(){
@@ -1316,10 +1329,19 @@ function wizFinish(){
   }
 }
 
+function isStepSkipped(step){
+  return !!(step.skipIf && step.skipIf());
+}
+
 function wizDefaultNextAction(){
-  if (wizIndex >= WIZ_STEPS.length - 1){ wizFinish(); return; }
-  wizIndex++;
-  wizRenderStep();
+  let i = wizIndex;
+  while (i < WIZ_STEPS.length - 1){
+    i++;
+    if (!isStepSkipped(WIZ_STEPS[i])){ wizIndex = i; wizRenderStep(); return; }
+  }
+  // Ran off the end (remaining steps were all skipped, or we were already
+  // on the last real step) — either way, nothing left to show but results.
+  wizFinish();
 }
 // Next always calls through this one variable — reassigned (not stacked)
 // when the button needs different behavior, e.g. on the review screen.
@@ -1338,9 +1360,13 @@ document.getElementById('wizNext').addEventListener('click', ()=>{
 });
 
 document.getElementById('wizBack').addEventListener('click', ()=>{
-  if (wizIndex === 0) return;
-  wizIndex--;
-  wizRenderStep();
+  let i = wizIndex;
+  while (i > 0){
+    i--;
+    if (!isStepSkipped(WIZ_STEPS[i])){ wizIndex = i; wizRenderStep(); return; }
+  }
+  // Every earlier step was skipped (shouldn't normally happen at index 0,
+  // but stay put rather than doing nothing silently if it ever does).
 });
 document.getElementById('wizSkipResults').addEventListener('click', wizFinish);
 
@@ -1359,6 +1385,7 @@ function wizRenderReview(){
   let lastPhase = null;
   WIZ_STEPS.forEach((step, idx)=>{
     if (step.type !== 'field' && step.type !== 'select') return;
+    if (isStepSkipped(step)) return;
     if (step.phase !== lastPhase){
       html += '<div class="wiz-review-phase">' + WIZ_PHASE_LABEL[step.phase] + '</div>';
       lastPhase = step.phase;
