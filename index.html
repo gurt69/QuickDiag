@@ -109,6 +109,15 @@
   .scan-panel-inner img{width:100%;border-radius:2px;border:1px solid var(--line);margin-bottom:10px;}
   .scan-status{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);margin-bottom:10px;}
   .scan-raw{font-family:'IBM Plex Mono',monospace;font-size:10.5px;line-height:1.5;background:#fff;border:1px solid var(--line);border-radius:2px;padding:8px 10px;max-height:140px;overflow-y:auto;white-space:pre-wrap;color:#4c565d;margin-bottom:10px;}
+
+  .scan-checklist{margin-bottom:10px;border:1px solid var(--line);border-radius:2px;overflow:hidden;}
+  .scan-check-row{display:flex;justify-content:space-between;gap:10px;padding:7px 10px;font-size:12.5px;line-height:1.4;border-bottom:1px solid var(--line);}
+  .scan-check-row:last-child{border-bottom:none;}
+  .scan-check-row.ok{background:var(--good-soft);color:#2b5636;}
+  .scan-check-row.miss{background:var(--bad-soft);color:#7a2a21;}
+  .scan-check-row .sc-icon{flex:0 0 auto;font-weight:700;}
+  .scan-check-row .sc-label{flex:1 1 auto;}
+  .scan-check-row .sc-value{flex:0 0 auto;font-family:'IBM Plex Mono',monospace;font-weight:600;}
   .scan-close{width:100%;font-family:'Oswald',sans-serif;font-weight:600;font-size:13px;letter-spacing:0.04em;background:var(--amber-deep);color:#fff;border:none;border-radius:2px;padding:9px;cursor:pointer;}
   .field input.scanned{border-color:var(--good);background:var(--good-soft);}
 
@@ -325,6 +334,12 @@
       <div class="field">
         <label for="ratedVoltage">Rated Voltage (V)</label>
         <input type="number" id="ratedVoltage" placeholder="e.g. 230">
+        <div class="hint">If the nameplate shows a single value (e.g. "230V"), that's this field — leave the next one blank.</div>
+      </div>
+      <div class="field">
+        <label for="ratedVoltageHigh">Rated Voltage — High End, If a Range (V)</label>
+        <input type="number" id="ratedVoltageHigh" placeholder="optional, e.g. 230">
+        <div class="hint">Many nameplates show a range instead, e.g. "208-230V" (dual-voltage rated). If so, put 208 above and 230 here — anything inside that range is normal, not just near one number.</div>
       </div>
       <div class="field">
         <label for="capTolerance">Capacitor Tolerance (±%)</label>
@@ -430,6 +445,7 @@
     <div class="scan-panel-inner">
       <img id="plateImg" alt="Data plate photo">
       <div class="scan-status" id="scanStatus">Reading plate…</div>
+      <div class="scan-checklist" id="scanChecklist" hidden></div>
       <div class="scan-raw" id="scanRaw" hidden></div>
       <button type="button" class="scan-close" id="scanClose">Close</button>
     </div>
@@ -505,6 +521,11 @@
         <div class="field-grid tight">
           <div class="field"><label for="indoorVoltage">Line Voltage (V)</label><input type="number" id="indoorVoltage" placeholder="measured"></div>
           <div class="field"><label for="indoorRatedVoltage">Rated Voltage (V)</label><input type="number" id="indoorRatedVoltage" placeholder="e.g. 230"></div>
+        </div>
+        <div class="field">
+          <label for="indoorRatedVoltageHigh">Rated Voltage — High End, If a Range (V)</label>
+          <input type="number" id="indoorRatedVoltageHigh" placeholder="optional, e.g. 230">
+          <div class="hint">Only fill this in if the nameplate shows a range like "208-230V" — put 208 above and 230 here.</div>
         </div>
       </div>
     </div>
@@ -622,6 +643,28 @@ function chipClass(status){
   return 'na';
 }
 
+const clamp = (n,a,b) => Math.max(a,Math.min(b,n));
+
+// Shared by both the checkpoint verdicts and the full diagnosis, so voltage
+// is scored exactly one way everywhere. `high` is optional — a lot of HVAC
+// equipment is dual-voltage-rated (e.g. a nameplate reading "208-230V"),
+// and anything inside that stated range is fully normal, not just near a
+// single nominal figure. When `high` is omitted, `low` is treated as the
+// single nominal rating and this reduces to a plain ±10% check.
+function evalVoltageRange(measured, low, high){
+  if (measured === null || !low) return null;
+  const effHigh = (high !== null && high !== undefined && high > 0) ? high : low;
+  if (measured >= low && measured <= effHigh) return { status:'normal', score:0, ref: low===effHigh?low:null };
+  if (measured < low){
+    const ratio = measured / low;
+    const score = clamp((0.95-ratio)/(0.95-0.85)*100, 0, 100);
+    return { status: score>0?'bad':'normal', score, direction:'low', ratioPct: Math.round(ratio*100), ref: low };
+  }
+  const ratio = measured / effHigh;
+  const score = clamp((ratio-1.05)/(1.15-1.05)*100, 0, 100);
+  return { status: score>0?'bad':'normal', score, direction:'high', ratioPct: Math.round(ratio*100), ref: effHigh };
+}
+
 // ---- Field Guide: plain-language explanations for readings a newer tech
 // might not recognize on sight. Each entry attaches a small "?" button
 // next to the matching label; clicking it expands a short explanation
@@ -657,6 +700,7 @@ const FIELD_GUIDE = {
   retStatic: 'Air pressure in the return duct right before the equipment — normally negative, since the blower is pulling out of that side.',
   voltage: 'The actual line voltage measured at the outdoor unit\'s disconnect or contactor, with the system running — not the indoor unit. This is what gets compared against compressor amp draw, since low voltage there is what makes a compressor pull extra current.',
   ratedVoltage: 'The nameplate voltage the outdoor unit is designed for, e.g. 230V — check the outdoor unit\'s own data plate. Motors are built to tolerate roughly ±10% of this before it becomes a real problem.',
+  ratedVoltageHigh: 'Only needed if the data plate shows two numbers instead of one, like "208-230V" — common on dual-voltage-rated equipment. Enter the low number in Rated Voltage above and the high number here. Anything measured between the two is treated as fully normal, not just close to one figure.',
   compAmp: 'The compressor\'s actual running current, clamped at one of the compressor\'s power leads while it\'s running.',
   compRLA: 'Rated Load Amps — the current the compressor is designed to draw under normal running conditions, printed on the equipment nameplate. Running noticeably above this stresses the motor; running noticeably below it can point to reduced refrigerant flow.',
   fanAmp: 'The condenser fan motor\'s actual running current, clamped at the motor leads while it\'s running.',
@@ -671,6 +715,7 @@ const FIELD_GUIDE = {
   capFanVolts: 'Voltage measured across the capacitor\'s COMMON and FAN terminals with the system running.',
   indoorVoltage: 'The actual line voltage measured at the indoor unit\'s disconnect (furnace or air handler), with the system running — a separate reading from the outdoor unit\'s voltage, since they can be on different circuits or runs.',
   indoorRatedVoltage: 'The nameplate voltage the indoor unit is designed for — check the indoor unit\'s own data plate, not the outdoor unit\'s.',
+  indoorRatedVoltageHigh: 'Only needed if the indoor unit\'s data plate shows two numbers instead of one, like "208-230V". Enter the low number in Rated Voltage above and the high number here.',
   blowerAmp: 'The indoor blower motor\'s actual running current, clamped at the motor leads while it\'s running.',
   blowerFLA: 'Full Load Amps — the maximum current the blower motor is rated to draw, printed on the motor or equipment nameplate. On a variable-speed (ECM) blower this varies with speed, so treat it as a rough ceiling rather than a fixed target.',
   blowerMotorType: 'Older and lower-cost systems typically run the blower off a run capacitor, same idea as the compressor. Many modern furnaces and air handlers use a variable-speed ECM blower instead, controlled electronically with no capacitor. Check the motor and its wiring before assuming which one you\'ve got.',
@@ -916,7 +961,14 @@ function parsePlateText(text){
   const clean = text.replace(/[|]/g, 'I');
 
   const voltMatch = clean.match(/(\d{2,3})\s*[\/\-–]?\s*(\d{2,3})?\s*V(?:OLT|AC)?/i);
-  if (voltMatch) found.ratedVoltage = parseFloat(voltMatch[1]);
+  if (voltMatch){
+    found.ratedVoltage = parseFloat(voltMatch[1]);
+    // A nameplate showing two numbers here (e.g. "208-230V") is a real
+    // dual-voltage rating, not noise — keep both instead of dropping the
+    // second one, so the app can treat that whole span as normal rather
+    // than flagging anything above the low end of the range.
+    if (voltMatch[2]) found.ratedVoltageHigh = parseFloat(voltMatch[2]);
+  }
 
   const rlaMatch = clean.match(/R\.?\s?L\.?\s?A\.?\D{0,6}(\d{1,3}\.?\d?)/i);
   if (rlaMatch) found.compRLA = parseFloat(rlaMatch[1]);
@@ -979,12 +1031,70 @@ function parseJobLinkText(text){
   return found;
 }
 
-function initScanner(triggerBtnId, fileInputId, parseFn, notFoundMsg){
+// Reads a field's own on-screen label rather than hardcoding a second copy
+// of every field name here — one source of truth for what a field is called.
+function fieldLabel(id){
+  const el = document.getElementById(id);
+  if (!el) return id;
+  const field = el.closest('.field');
+  const label = field ? field.querySelector('label') : null;
+  const text = label ? (label.textContent || '').replace(/\?\s*$/, '').trim() : id;
+  // Some fields share an identical label (e.g. "Pressure (psig)" on both
+  // suction and liquid) and are only disambiguated by the colored group tag
+  // shown in the wizard — reuse that same context here so a scan checklist
+  // entry never reads as ambiguous as the raw field label alone would.
+  const step = (typeof WIZ_STEPS !== 'undefined') ? WIZ_STEPS.find(s=>s.id===id && s.group) : null;
+  return step ? (step.group + ' — ' + text) : text;
+}
+
+// What a successful scan of each source *should* be able to fill — used to
+// build the "captured / not captured" checklist after OCR runs, so a tech
+// sees exactly what still needs to be entered by hand rather than having
+// to guess from a vague "some values were pulled" message.
+const SCAN_EXPECTED_FIELDS = {
+  plate: ['ratedVoltage', 'compRLA', 'fanFLA'],
+  refrig: ['suctionP','suctionT','vaporSat','actualSH','liquidP','liquidT','liquidSat','actualSC','dischargeP'],
+  airside: ['retDB','retWB','retRH','retDP','retEnth','supDB','supWB','supRH','supDP','supEnth'],
+};
+
+function detectScanMode(scannerType, text){
+  if (scannerType === 'plate') return 'plate';
+  const isAirSide = /return|supply|dry\s*bulb|wet\s*bulb|dew\s*point|enthalpy|relative\s*humidity/i.test(text);
+  const isRefrig = /suction|liquid|superheat|subcool|saturation/i.test(text);
+  if (isRefrig) return 'refrig';
+  if (isAirSide) return 'airside';
+  return null;
+}
+
+function renderScanChecklist(mode, found){
+  const box = document.getElementById('scanChecklist');
+  if (!mode){ box.hidden = true; box.innerHTML = ''; return; }
+  const expected = SCAN_EXPECTED_FIELDS[mode];
+  let html = '';
+  expected.forEach(id=>{
+    const got = found[id] !== undefined && !isNaN(found[id]);
+    html += '<div class="scan-check-row '+(got?'ok':'miss')+'">'
+      + '<span class="sc-icon">'+(got?'✓':'✗')+'</span>'
+      + '<span class="sc-label">'+fieldLabel(id)+'</span>'
+      + (got ? '<span class="sc-value">'+found[id]+'</span>' : '<span class="sc-value">enter manually</span>')
+      + '</div>';
+  });
+  // A range-style voltage (e.g. "208-230V") is a bonus catch, not something
+  // every plate has — show it only when it was actually found, never as a miss.
+  if (mode === 'plate' && found.ratedVoltageHigh !== undefined && !isNaN(found.ratedVoltageHigh)){
+    html += '<div class="scan-check-row ok"><span class="sc-icon">✓</span><span class="sc-label">'+fieldLabel('ratedVoltageHigh')+'</span><span class="sc-value">'+found.ratedVoltageHigh+'</span></div>';
+  }
+  box.innerHTML = html;
+  box.hidden = false;
+}
+
+function initScanner(triggerBtnId, fileInputId, parseFn, notFoundMsg, scannerType){
   const scanBtn = document.getElementById(triggerBtnId);
   const fileInput = document.getElementById(fileInputId);
   const scanPanel = document.getElementById('scanPanel');
   const plateImg = document.getElementById('plateImg');
   const scanStatus = document.getElementById('scanStatus');
+  const scanChecklist = document.getElementById('scanChecklist');
   const scanRaw = document.getElementById('scanRaw');
   const scanClose = document.getElementById('scanClose');
 
@@ -1003,6 +1113,7 @@ function initScanner(triggerBtnId, fileInputId, parseFn, notFoundMsg){
     plateImg.src = url;
     openScan();
     scanRaw.hidden = true;
+    scanChecklist.hidden = true;
     scanStatus.textContent = 'Loading OCR engine…';
 
     const timeout = new Promise((_, reject)=> setTimeout(()=> reject(new Error('timeout')), 25000));
@@ -1038,8 +1149,11 @@ function initScanner(triggerBtnId, fileInputId, parseFn, notFoundMsg){
         }
       });
 
+      const mode = detectScanMode(scannerType, text);
+      renderScanChecklist(mode, found);
+
       scanStatus.textContent = filledAny
-        ? 'Pulled some values from the photo — double-check them before trusting them, then close this to keep going.'
+        ? 'Here\'s what came through — double-check the captured values against the photo before trusting them.'
         : notFoundMsg;
       if (text && text.trim()){
         scanRaw.hidden = false;
@@ -1050,8 +1164,8 @@ function initScanner(triggerBtnId, fileInputId, parseFn, notFoundMsg){
     }
   });
 }
-initScanner('scanBtn', 'plateInput', parsePlateText, 'Couldn\'t confidently pull numbers off this plate. Zoom in on the photo above and enter values manually below.');
-initScanner('jobLinkScanBtn', 'jobLinkInput', parseJobLinkText, 'Couldn\'t confidently match this to a Refrigerant Side or Air Side screen. Zoom in on the photo above and enter values manually below.');
+initScanner('scanBtn', 'plateInput', parsePlateText, 'Couldn\'t confidently pull numbers off this plate. Zoom in on the photo above and enter values manually below.', 'plate');
+initScanner('jobLinkScanBtn', 'jobLinkInput', parseJobLinkText, 'Couldn\'t confidently match this to a Refrigerant Side or Air Side screen. Zoom in on the photo above and enter values manually below.', 'joblink');
 
 // ---- Step-by-step wizard (one field at a time, strict EAR order) ----
 // Nothing below this line touches run(), the scoring, EAR logic, question
@@ -1081,6 +1195,7 @@ const WIZ_STEPS = [
   { type:'intro', phase:'electrical', title:'Electrical — checked first, per EAR', desc:'Electrical problems can cause misleading airflow and refrigerant symptoms downstream, which is why this comes first. Got the data plate handy? Scan it below to autofill rated values — or tap Continue to skip that and enter everything by hand.', scanBtn:true },
   { type:'field', id:'voltage', phase:'electrical', group:'OUTDOOR UNIT — DISCONNECT', groupClass:'grp-elec' },
   { type:'field', id:'ratedVoltage', phase:'electrical', group:'OUTDOOR UNIT — DISCONNECT', groupClass:'grp-elec' },
+  { type:'field', id:'ratedVoltageHigh', phase:'electrical', group:'OUTDOOR UNIT — DISCONNECT', groupClass:'grp-elec' },
   { type:'checkpoint', id:'chk_voltage', phase:'electrical', check:'voltage' },
   { type:'field', id:'compAmp', phase:'electrical', group:'COMPRESSOR', groupClass:'grp-elec' },
   { type:'field', id:'compRLA', phase:'electrical', group:'COMPRESSOR', groupClass:'grp-elec' },
@@ -1102,6 +1217,7 @@ const WIZ_STEPS = [
   { type:'intro', phase:'electrical', title:'Now the Indoor Side', desc:'Same idea, different unit — the outdoor checks are done, so let\'s cover the furnace/air handler before moving on to Airflow.' },
   { type:'field', id:'indoorVoltage', phase:'electrical', group:'INDOOR UNIT — DISCONNECT', groupClass:'grp-elec' },
   { type:'field', id:'indoorRatedVoltage', phase:'electrical', group:'INDOOR UNIT — DISCONNECT', groupClass:'grp-elec' },
+  { type:'field', id:'indoorRatedVoltageHigh', phase:'electrical', group:'INDOOR UNIT — DISCONNECT', groupClass:'grp-elec' },
   { type:'checkpoint', id:'chk_voltageIndoor', phase:'electrical', check:'voltageIndoor' },
   { type:'field', id:'blowerAmp', phase:'electrical', group:'BLOWER MOTOR', groupClass:'grp-elec' },
   { type:'field', id:'blowerFLA', phase:'electrical', group:'BLOWER MOTOR', groupClass:'grp-elec' },
@@ -1159,12 +1275,12 @@ const WIZ_PHASE_LABEL = { setup:'SETUP', electrical:'ELECTRICAL', airflow:'AIRFL
 //   superheat/subcool ±4°F/±3°F of target.
 const WIZ_CHECKS = {
   voltage(){
-    const v = num('voltage'), rv = num('ratedVoltage');
+    const v = num('voltage'), rv = num('ratedVoltage'), rvh = num('ratedVoltageHigh');
     if (v === null || !rv) return { status:'skip', msg:'Not enough info to check yet — both fields were left blank.' };
-    const ratio = v / rv;
-    if (ratio < 0.95) return { status:'bad', msg:'Outdoor unit voltage is running low — '+v+'V against a rated '+rv+'V ('+Math.round(ratio*100)+'%). Low voltage alone can cause higher amp draw, nuisance trips, and misleading downstream symptoms.' };
-    if (ratio > 1.05) return { status:'bad', msg:'Outdoor unit voltage is running high — '+v+'V against a rated '+rv+'V ('+Math.round(ratio*100)+'%). Sustained overvoltage stresses motors and controls.' };
-    return { status:'good', msg:'Voltage looks normal — '+v+'V against a rated '+rv+'V.' };
+    const r = evalVoltageRange(v, rv, rvh);
+    const rangeTxt = rvh ? (rv+'–'+rvh+'V') : (rv+'V');
+    if (r.status === 'bad') return { status:'bad', msg:'Outdoor unit voltage is running '+r.direction+' — '+v+'V against a rated '+rangeTxt+' ('+r.ratioPct+'% of the '+(r.direction==='low'?'low':'high')+' end). '+(r.direction==='low' ? 'Low voltage alone can cause higher amp draw, nuisance trips, and misleading downstream symptoms.' : 'Sustained overvoltage stresses motors and controls.') };
+    return { status:'good', msg:'Voltage looks normal — '+v+'V against a rated '+rangeTxt+'.' };
   },
   ampComp(){
     const a = num('compAmp'), r = num('compRLA');
@@ -1181,12 +1297,12 @@ const WIZ_CHECKS = {
     return { status:'good', msg:'Condenser fan amp draw looks normal — '+a+'A against a rated '+r+'A FLA.' };
   },
   voltageIndoor(){
-    const v = num('indoorVoltage'), rv = num('indoorRatedVoltage');
+    const v = num('indoorVoltage'), rv = num('indoorRatedVoltage'), rvh = num('indoorRatedVoltageHigh');
     if (v === null || !rv) return { status:'skip', msg:'Not enough info to check yet — both fields were left blank.' };
-    const ratio = v / rv;
-    if (ratio < 0.95) return { status:'bad', msg:'Indoor unit voltage is running low — '+v+'V against a rated '+rv+'V ('+Math.round(ratio*100)+'%). Low voltage alone can cause higher amp draw, nuisance trips, and misleading downstream symptoms.' };
-    if (ratio > 1.05) return { status:'bad', msg:'Indoor unit voltage is running high — '+v+'V against a rated '+rv+'V ('+Math.round(ratio*100)+'%). Sustained overvoltage stresses motors and controls.' };
-    return { status:'good', msg:'Indoor unit voltage looks normal — '+v+'V against a rated '+rv+'V.' };
+    const r = evalVoltageRange(v, rv, rvh);
+    const rangeTxt = rvh ? (rv+'–'+rvh+'V') : (rv+'V');
+    if (r.status === 'bad') return { status:'bad', msg:'Indoor unit voltage is running '+r.direction+' — '+v+'V against a rated '+rangeTxt+' ('+r.ratioPct+'% of the '+(r.direction==='low'?'low':'high')+' end). '+(r.direction==='low' ? 'Low voltage alone can cause higher amp draw, nuisance trips, and misleading downstream symptoms.' : 'Sustained overvoltage stresses motors and controls.') };
+    return { status:'good', msg:'Indoor unit voltage looks normal — '+v+'V against a rated '+rangeTxt+'.' };
   },
   ampBlower(){
     const a = num('blowerAmp'), r = num('blowerFLA');
@@ -1597,24 +1713,24 @@ function run(){
   const retEnth = num('retEnth'), supEnth = num('supEnth');
   const supRH = num('supRH');
   const supStatic = num('supStatic'), retStatic = num('retStatic');
-  const voltage = num('voltage'), ratedVoltage = num('ratedVoltage');
+  const voltage = num('voltage'), ratedVoltage = num('ratedVoltage'), ratedVoltageHigh = num('ratedVoltageHigh');
   const compAmp = num('compAmp'), compRLA = num('compRLA');
   const fanAmp = num('fanAmp'), fanFLA = num('fanFLA');
   const capToleranceIn = num('capTolerance');
   const capTolerance = capToleranceIn !== null ? capToleranceIn : 6;
   const capCompRated = num('capCompRated'), capCompAmps = num('capCompAmps'), capCompVolts = num('capCompVolts');
   const capFanRated = num('capFanRated'), capFanAmps = num('capFanAmps'), capFanVolts = num('capFanVolts');
-  const indoorVoltage = num('indoorVoltage'), indoorRatedVoltage = num('indoorRatedVoltage');
+  const indoorVoltage = num('indoorVoltage'), indoorRatedVoltage = num('indoorRatedVoltage'), indoorRatedVoltageHigh = num('indoorRatedVoltageHigh');
   const blowerAmp = num('blowerAmp'), blowerFLA = num('blowerFLA');
   const blowerCapRated = num('blowerCapRated'), blowerCapAmps = num('blowerCapAmps'), blowerCapVolts = num('blowerCapVolts');
 
   const deltaT = (retDB!==null && supDB!==null) ? (retDB - supDB) : null;
   const enthalpyDrop = (retEnth!==null && supEnth!==null) ? (retEnth - supEnth) : null;
   const tesp = (supStatic!==null && retStatic!==null) ? (supStatic - retStatic) : null;
-  const voltRatio = (voltage!==null && ratedVoltage) ? (voltage/ratedVoltage) : null;
+  const voltEval = evalVoltageRange(voltage, ratedVoltage, ratedVoltageHigh);
   const ampRatio = (compAmp!==null && compRLA) ? (compAmp/compRLA) : null;
   const fanAmpRatio = (fanAmp!==null && fanFLA) ? (fanAmp/fanFLA) : null;
-  const indoorVoltRatio = (indoorVoltage!==null && indoorRatedVoltage) ? (indoorVoltage/indoorRatedVoltage) : null;
+  const indoorVoltEval = evalVoltageRange(indoorVoltage, indoorRatedVoltage, indoorRatedVoltageHigh);
   const blowerAmpRatio = (blowerAmp!==null && blowerFLA) ? (blowerAmp/blowerFLA) : null;
 
   // Running capacitance test: MFD = (Amps × 2652) / Volts, measured across
@@ -1691,7 +1807,6 @@ function run(){
   }
 
   const fmt = n => (n===null||n===undefined) ? '—' : n.toFixed(1);
-  const clamp = (n,a,b) => Math.max(a,Math.min(b,n));
   const findings = [];
   const flags = [];
 
@@ -1836,22 +1951,17 @@ function run(){
   // problem, so they're scored independently rather than folded into the
   // refrigerant-side rules above.
   let voltFlag = null;
-  if (voltRatio !== null){
-    if (voltRatio < 0.95){
-      const score = clamp((0.95-voltRatio)/(0.95-0.85)*100, 0, 100);
-      voltFlag = 'low';
-      findings.push({
-        cat: 'electrical', id: 'voltage_low', title: 'Low Voltage — Outdoor Unit', score,
-        detail: 'Line voltage at the outdoor disconnect measured <b>'+fmt(voltage)+'V</b> against a rated <b>'+fmt(ratedVoltage)+'V</b> — that\'s '+(voltRatio*100).toFixed(0)+'% of rated, outside the normal ±10% motor tolerance. Low voltage makes every motor in the system pull more current to do the same work, can cause nuisance overloads or short-cycling, and should be checked (loose connections, undersized wire, utility supply) before chasing a refrigerant-side cause.'
-      });
-    } else if (voltRatio > 1.05){
-      const score = clamp((voltRatio-1.05)/(1.15-1.05)*100, 0, 100);
-      voltFlag = 'high';
-      findings.push({
-        cat: 'electrical', id: 'voltage_high', title: 'High Voltage — Outdoor Unit', score,
-        detail: 'Line voltage at the outdoor disconnect measured <b>'+fmt(voltage)+'V</b> against a rated <b>'+fmt(ratedVoltage)+'V</b> — that\'s '+(voltRatio*100).toFixed(0)+'% of rated, outside the normal ±10% motor tolerance. Sustained overvoltage stresses motor windings and controls over time — worth a call to the utility or an electrician if it\'s consistent.'
-      });
-    }
+  if (voltEval && voltEval.status === 'bad'){
+    voltFlag = voltEval.direction;
+    const rangeTxt = ratedVoltageHigh ? (fmt(ratedVoltage)+'–'+fmt(ratedVoltageHigh)+'V') : (fmt(ratedVoltage)+'V');
+    findings.push({
+      cat: 'electrical', id: voltEval.direction==='low' ? 'voltage_low' : 'voltage_high',
+      title: (voltEval.direction==='low' ? 'Low' : 'High') + ' Voltage — Outdoor Unit', score: voltEval.score,
+      detail: 'Line voltage at the outdoor disconnect measured <b>'+fmt(voltage)+'V</b> against a rated <b>'+rangeTxt+'</b> — that\'s '+voltEval.ratioPct+'% of the '+voltEval.direction+' end, outside the normal ±10% motor tolerance. '
+        + (voltEval.direction==='low'
+          ? 'Low voltage makes every motor in the system pull more current to do the same work, can cause nuisance overloads or short-cycling, and should be checked (loose connections, undersized wire, utility supply) before chasing a refrigerant-side cause.'
+          : 'Sustained overvoltage stresses motor windings and controls over time — worth a call to the utility or an electrician if it\'s consistent.')
+    });
   }
 
   if (ampRatio !== null && ampRatio > 1.1){
@@ -1891,22 +2001,17 @@ function run(){
 
   // Indoor side — same three checks, mirrored for the furnace/air handler.
   let indoorVoltFlag = null;
-  if (indoorVoltRatio !== null){
-    if (indoorVoltRatio < 0.95){
-      const score = clamp((0.95-indoorVoltRatio)/(0.95-0.85)*100, 0, 100);
-      indoorVoltFlag = 'low';
-      findings.push({
-        cat: 'electrical', id: 'indoor_voltage_low', title: 'Low Voltage — Indoor Unit', score,
-        detail: 'Line voltage at the indoor disconnect measured <b>'+fmt(indoorVoltage)+'V</b> against a rated <b>'+fmt(indoorRatedVoltage)+'V</b> — that\'s '+(indoorVoltRatio*100).toFixed(0)+'% of rated, outside the normal ±10% motor tolerance. Low voltage makes every motor in the system pull more current to do the same work, can cause nuisance overloads or short-cycling, and should be checked (loose connections, undersized wire, breaker) before chasing anything else.'
-      });
-    } else if (indoorVoltRatio > 1.05){
-      const score = clamp((indoorVoltRatio-1.05)/(1.15-1.05)*100, 0, 100);
-      indoorVoltFlag = 'high';
-      findings.push({
-        cat: 'electrical', id: 'indoor_voltage_high', title: 'High Voltage — Indoor Unit', score,
-        detail: 'Line voltage at the indoor disconnect measured <b>'+fmt(indoorVoltage)+'V</b> against a rated <b>'+fmt(indoorRatedVoltage)+'V</b> — that\'s '+(indoorVoltRatio*100).toFixed(0)+'% of rated, outside the normal ±10% motor tolerance. Sustained overvoltage stresses motor windings and controls over time — worth a call to the utility or an electrician if it\'s consistent.'
-      });
-    }
+  if (indoorVoltEval && indoorVoltEval.status === 'bad'){
+    indoorVoltFlag = indoorVoltEval.direction;
+    const rangeTxt = indoorRatedVoltageHigh ? (fmt(indoorRatedVoltage)+'–'+fmt(indoorRatedVoltageHigh)+'V') : (fmt(indoorRatedVoltage)+'V');
+    findings.push({
+      cat: 'electrical', id: indoorVoltEval.direction==='low' ? 'indoor_voltage_low' : 'indoor_voltage_high',
+      title: (indoorVoltEval.direction==='low' ? 'Low' : 'High') + ' Voltage — Indoor Unit', score: indoorVoltEval.score,
+      detail: 'Line voltage at the indoor disconnect measured <b>'+fmt(indoorVoltage)+'V</b> against a rated <b>'+rangeTxt+'</b> — that\'s '+indoorVoltEval.ratioPct+'% of the '+indoorVoltEval.direction+' end, outside the normal ±10% motor tolerance. '
+        + (indoorVoltEval.direction==='low'
+          ? 'Low voltage makes every motor in the system pull more current to do the same work, can cause nuisance overloads or short-cycling, and should be checked (loose connections, undersized wire, breaker) before chasing anything else.'
+          : 'Sustained overvoltage stresses motor windings and controls over time — worth a call to the utility or an electrician if it\'s consistent.')
+    });
   }
 
   if (blowerAmpRatio !== null && blowerAmpRatio > 1.1){
