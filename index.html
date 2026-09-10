@@ -382,6 +382,14 @@
   </div>
 
   <div class="section-label accent-air">AIR SIDE</div>
+  <div class="field" style="margin:16px 16px 0;">
+    <label for="filterVerified">Filter Check</label>
+    <select id="filterVerified">
+      <option value="unanswered"></option>
+      <option value="yes">Yes — Verified Clean</option>
+      <option value="no">No — Not Checked Yet</option>
+    </select>
+  </div>
   <div class="gauges">
     <div class="gauge-panel ret">
       <div class="side-head">RETURN</div>
@@ -673,6 +681,7 @@ const FIELD_GUIDE = {
   refrigerant: 'What refrigerant is in this system — check the equipment nameplate or the line set label. Different refrigerants run at different pressures for the same temperature, so this changes what a "normal" gauge reading looks like.',
   sysType: 'Straight AC: a standard split system, cooling only, usually paired with a furnace that handles the heat. Heat Pump: same idea but reversible — this tool assumes it\'s running in cooling mode. Package Unit: everything (compressor, both coils, and often a gas furnace) built and charged together in one pre-sized outdoor cabinet, common on roofs and slabs — no line set length to throw the charge off since there\'s no field-run line set. Factory charge still isn\'t a guarantee (assembly errors, shipping damage) — verify with superheat/subcooling like anything else.',
   metering: 'The part that controls how much liquid refrigerant enters the evaporator. A TXV adjusts on the fly to hold a steady superheat, so subcooling is the more reliable number to charge by. A fixed orifice/piston is a fixed hole with no adjustment, so superheat is the more reliable number to charge by.',
+  filterVerified: 'A dirty filter is the single most common cause of restricted airflow, and it throws off delta T, static pressure, and every downstream refrigerant reading. Confirming it\'s clean now rules out the most likely culprit before you take the rest of these measurements.',
   ambient: 'The outdoor air temperature right now, measured near the condenser. Head pressure should track ambient — roughly 20–35°F of saturated condensing temp above whatever this reads.',
   targetSH: 'The superheat this specific unit is designed to run at, usually found on the equipment\'s charging chart or install manual — not a universal number. If you don\'t know it, this tool assumes 12°F as a rough placeholder.',
   targetSC: 'The subcooling this specific unit is designed to run at, usually printed on the unit\'s data plate or charging chart. If you don\'t know it, this tool assumes 10°F as a rough placeholder.',
@@ -1230,6 +1239,8 @@ const WIZ_STEPS = [
   { type:'checkpoint', id:'chk_capBlower', phase:'electrical', check:'capacitorBlower' },
 
   { type:'intro', phase:'airflow', title:'Airflow — second, per EAR', desc:'Refrigerant readings only mean what they\'re supposed to mean once airflow across the coil is confirmed correct — that\'s why this comes before Refrigerant.' },
+  { type:'select', id:'filterVerified', phase:'airflow', title:'Filter Check', desc:'A dirty filter is the single most common cause of airflow problems, and it skews every other airflow reading you\'re about to take. Have you verified every filter — return grille, filter rack, etc. — is actually clean?',
+    options:[['yes','Yes — Verified Clean'],['no','No — Not Checked Yet']], linksToQuestion:'af_filter' },
   { type:'field', id:'ambient', phase:'airflow' },
   { type:'field', id:'targetStatic', phase:'airflow' },
   { type:'field', id:'supStatic', phase:'airflow', group:'SUPPLY', groupClass:'grp-supply' },
@@ -1447,6 +1458,15 @@ function wizRenderStep(){
       btn.addEventListener('click', ()=>{
         realSelect.value = val;
         if (step.showPkgTip) pkgTipSync();
+        if (step.linksToQuestion){
+          // "Verified clean" answers the linked Sharpen-the-Ranking question
+          // (worded as "is it dirty?") on the tech's behalf, pre-emptively
+          // ruling out the most common airflow cause instead of asking
+          // about it twice. "Not checked yet" leaves it genuinely
+          // unanswered so the follow-up can still surface later if relevant.
+          if (val === 'yes') questionAnswers[step.linksToQuestion] = 'no';
+          else delete questionAnswers[step.linksToQuestion];
+        }
         group.querySelectorAll('.wiz-select-btn').forEach(b=> b.classList.remove('chosen'));
         btn.classList.add('chosen');
       });
@@ -1647,7 +1667,7 @@ function wizRenderReview(){
     let display;
     if (step.type === 'select'){
       const opt = step.options.find(o=>o[0]===el.value);
-      display = opt ? opt[1] : el.value;
+      display = opt ? opt[1] : (el.value === 'unanswered' ? null : el.value);
     } else {
       display = el.value !== '' ? el.value : null;
     }
