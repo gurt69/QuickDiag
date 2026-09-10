@@ -318,10 +318,12 @@
       <div class="field">
         <label for="targetSH">Mfr. Target Superheat (°F)</label>
         <input type="number" id="targetSH" placeholder="default 12">
+        <div class="hint">Not on the main data plate? Check inside the access panel or control box — many manufacturers print the real charging chart on a sticker in there.</div>
       </div>
       <div class="field">
         <label for="targetSC">Mfr. Target Subcool (°F)</label>
         <input type="number" id="targetSC" placeholder="default 10">
+        <div class="hint">Not on the main data plate? Check inside the access panel or control box — many manufacturers print the real charging chart on a sticker in there.</div>
       </div>
       <div class="field">
         <label for="targetStatic">Rated Static (in. w.c.)</label>
@@ -683,8 +685,8 @@ const FIELD_GUIDE = {
   metering: 'The part that controls how much liquid refrigerant enters the evaporator. A TXV adjusts on the fly to hold a steady superheat, so subcooling is the more reliable number to charge by. A fixed orifice/piston is a fixed hole with no adjustment, so superheat is the more reliable number to charge by.',
   filterVerified: 'A dirty filter is the single most common cause of restricted airflow, and it throws off delta T, static pressure, and every downstream refrigerant reading. Confirming it\'s clean now rules out the most likely culprit before you take the rest of these measurements.',
   ambient: 'The outdoor air temperature right now, measured near the condenser. Head pressure should track ambient — roughly 20–35°F of saturated condensing temp above whatever this reads.',
-  targetSH: 'The superheat this specific unit is designed to run at, usually found on the equipment\'s charging chart or install manual — not a universal number. If you don\'t know it, this tool assumes 12°F as a rough placeholder.',
-  targetSC: 'The subcooling this specific unit is designed to run at, usually printed on the unit\'s data plate or charging chart. If you don\'t know it, this tool assumes 10°F as a rough placeholder.',
+  targetSH: 'The superheat this specific unit is designed to run at — not a universal number, and often not on the main data plate. Check inside the unit\'s access panel or control box first: many manufacturers print the actual charging chart on a sticker in there rather than on the exterior nameplate. If you truly can\'t find it, this tool assumes 12°F as a rough placeholder — treat that as a last resort, not a target to charge to.',
+  targetSC: 'The subcooling this specific unit is designed to run at — often not on the main data plate. Check inside the unit\'s access panel or control box first: many manufacturers print the actual charging chart on a sticker in there rather than on the exterior nameplate. If you truly can\'t find it, this tool assumes 10°F as a rough placeholder — treat that as a last resort, not a target to charge to.',
   targetStatic: 'The maximum total external static pressure the equipment is rated for, found on the nameplate — commonly 0.5 in. w.c. on residential systems. This is the ceiling the blower is designed to push against.',
   suctionP: 'The pressure on the low side of the system, read at the suction (vapor) line with your gauge.',
   suctionT: 'The actual temperature of the suction line itself, measured with a clamp or strap-on probe a few inches from the compressor.',
@@ -1371,8 +1373,13 @@ const WIZ_CHECKS = {
     if (deltaT > 23){ bad = true; notes.push('delta T is high at '+deltaT.toFixed(1)+'°F (normal is 16–22°F) — points to restricted airflow'); }
     else if (deltaT < 14){ bad = true; notes.push('delta T is low at '+deltaT.toFixed(1)+'°F (normal is 16–22°F)'); }
     else notes.push('delta T looks normal at '+deltaT.toFixed(1)+'°F');
-    if (enthDrop !== null && enthDrop < 8){ bad = true; notes.push('enthalpy drop is low at '+enthDrop.toFixed(1)+' Btu/lb, suggesting low total capacity'); }
-    return { status: bad ? 'bad' : 'good', msg: notes.join('; ') + '.' };
+    const enthLow = enthDrop !== null && enthDrop < 8;
+    if (enthLow){ bad = true; notes.push('enthalpy drop is low at '+enthDrop.toFixed(1)+' Btu/lb, suggesting low total capacity'); }
+    let msg = notes.join('; ') + '.';
+    if (enthLow){
+      msg += ' Enthalpy is the total heat in the air — the temperature drop you can feel (sensible heat) plus the moisture pulled out of it (latent heat), combined into one number, not just what a thermometer alone shows. That\'s why delta T and enthalpy drop can disagree like this: the air is dropping a normal number of degrees, but the system isn\'t pulling much total heat-plus-moisture out of it overall — which points to reduced real capacity (low airflow, low charge, or a dirty coil) even though the plain temperature swing looks fine on its own.';
+    }
+    return { status: bad ? 'bad' : 'good', msg };
   },
   charge(){
     const targetSH = num('targetSH') !== null ? num('targetSH') : 12;
