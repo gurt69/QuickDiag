@@ -496,6 +496,54 @@
     </div>
   </div>
 
+  <div class="section-label accent-elec">INDOOR ELECTRICAL</div>
+  <div class="gauges">
+    <div class="gauge-panel elec">
+      <div class="side-head">INDOOR UNIT VOLTAGE</div>
+      <div class="hazard-strip"></div>
+      <div class="body">
+        <div class="field-grid tight">
+          <div class="field"><label for="indoorVoltage">Line Voltage (V)</label><input type="number" id="indoorVoltage" placeholder="measured"></div>
+          <div class="field"><label for="indoorRatedVoltage">Rated Voltage (V)</label><input type="number" id="indoorRatedVoltage" placeholder="e.g. 230"></div>
+        </div>
+      </div>
+    </div>
+    <div class="gauge-panel elec">
+      <div class="side-head">BLOWER MOTOR</div>
+      <div class="hazard-strip"></div>
+      <div class="body">
+        <div class="field-grid tight">
+          <div class="field"><label for="blowerAmp">Amp Draw (A)</label><input type="number" id="blowerAmp" placeholder="measured"></div>
+          <div class="field"><label for="blowerFLA">Rated Full Load Amps — FLA (A)</label><input type="number" id="blowerFLA" placeholder="data plate"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap-panel">
+    <div class="side-head">BLOWER CAPACITOR TEST</div>
+    <div class="hazard-strip"></div>
+    <div class="body">
+      <div class="field">
+        <label for="blowerMotorType">Indoor Blower Motor</label>
+        <select id="blowerMotorType">
+          <option value="cap">Capacitor-Driven</option>
+          <option value="ecm">Board-Driven (ECM / Variable Speed) — No Capacitor</option>
+        </select>
+        <div class="hint">Many modern furnaces and air handlers run a variable-speed ECM blower with no capacitor at all — check before assuming one.</div>
+      </div>
+      <div class="field">
+        <label for="blowerCapRated">Rated (µF)</label>
+        <input type="number" id="blowerCapRated" placeholder="printed on capacitor">
+      </div>
+      <div class="field-grid tight">
+        <div class="field"><label for="blowerCapAmps">Amps (C–Blower)</label><input type="number" id="blowerCapAmps" step="0.1" placeholder="measured"></div>
+        <div class="field"><label for="blowerCapVolts">Volts (C–Blower)</label><input type="number" id="blowerCapVolts" placeholder="measured"></div>
+      </div>
+      <div class="cap-readout" id="blowerCapReadout"></div>
+    </div>
+  </div>
+
   <div class="confirm-row" style="display:none;">
     <button type="button" class="confirm-btn" id="confirmBtn">Confirm &amp; Run Diagnosis</button>
     <div class="stale-note" id="staleNote" hidden>⚠ Inputs have changed since the last run — press Confirm to update the results below.</div>
@@ -607,8 +655,8 @@ const FIELD_GUIDE = {
   supEnth: 'The total heat content of the supply air — sensible plus latent — in Btu per pound of air, after it\'s passed through the coil.',
   supStatic: 'Air pressure in the supply duct right after the equipment, measured with a manometer or static probe — positive, since the blower is pushing air into it.',
   retStatic: 'Air pressure in the return duct right before the equipment — normally negative, since the blower is pulling out of that side.',
-  voltage: 'The actual line voltage at the disconnect or contactor, measured with a meter while the system is running.',
-  ratedVoltage: 'The nameplate voltage the equipment is designed for, e.g. 230V. Motors are built to tolerate roughly ±10% of this before it becomes a real problem.',
+  voltage: 'The actual line voltage measured at the outdoor unit\'s disconnect or contactor, with the system running — not the indoor unit. This is what gets compared against compressor amp draw, since low voltage there is what makes a compressor pull extra current.',
+  ratedVoltage: 'The nameplate voltage the outdoor unit is designed for, e.g. 230V — check the outdoor unit\'s own data plate. Motors are built to tolerate roughly ±10% of this before it becomes a real problem.',
   compAmp: 'The compressor\'s actual running current, clamped at one of the compressor\'s power leads while it\'s running.',
   compRLA: 'Rated Load Amps — the current the compressor is designed to draw under normal running conditions, printed on the equipment nameplate. Running noticeably above this stresses the motor; running noticeably below it can point to reduced refrigerant flow.',
   fanAmp: 'The condenser fan motor\'s actual running current, clamped at the motor leads while it\'s running.',
@@ -621,6 +669,14 @@ const FIELD_GUIDE = {
   capFanRated: 'The fan side\'s rated capacitance in microfarads (µF) — on a dual-rated capacitor this is usually the smaller of the two numbers (e.g. the "5" in "45/5 MFD 370V"). If the fan has its own separate capacitor, it\'s whatever\'s printed on that one. Not applicable if the fan is board-driven (ECM).',
   capFanAmps: 'Amp draw measured with your clamp meter on the wire between the capacitor\'s COMMON terminal and the FAN terminal, with the system running.',
   capFanVolts: 'Voltage measured across the capacitor\'s COMMON and FAN terminals with the system running.',
+  indoorVoltage: 'The actual line voltage measured at the indoor unit\'s disconnect (furnace or air handler), with the system running — a separate reading from the outdoor unit\'s voltage, since they can be on different circuits or runs.',
+  indoorRatedVoltage: 'The nameplate voltage the indoor unit is designed for — check the indoor unit\'s own data plate, not the outdoor unit\'s.',
+  blowerAmp: 'The indoor blower motor\'s actual running current, clamped at the motor leads while it\'s running.',
+  blowerFLA: 'Full Load Amps — the maximum current the blower motor is rated to draw, printed on the motor or equipment nameplate. On a variable-speed (ECM) blower this varies with speed, so treat it as a rough ceiling rather than a fixed target.',
+  blowerMotorType: 'Older and lower-cost systems typically run the blower off a run capacitor, same idea as the compressor. Many modern furnaces and air handlers use a variable-speed ECM blower instead, controlled electronically with no capacitor. Check the motor and its wiring before assuming which one you\'ve got.',
+  blowerCapRated: 'The blower capacitor\'s rated capacitance in microfarads (µF), printed right on it. Not applicable if the blower is board-driven (ECM).',
+  blowerCapAmps: 'Amp draw measured with your clamp meter on the wire between the capacitor\'s COMMON terminal and the BLOWER terminal, with the system running.',
+  blowerCapVolts: 'Voltage measured across the capacitor\'s COMMON and BLOWER terminals with the system running.',
   shLabel: 'Superheat compares the suction line temperature to the refrigerant\'s boiling point at that pressure. It\'s one of the two main numbers (with subcooling) used to tell if a system is properly charged and confirm the evaporator isn\'t flooding or starving.',
   scLabel: 'Subcooling compares the refrigerant\'s condensing temperature to the actual liquid line temperature. It\'s the companion number to superheat — together they\'re the main charge-diagnosis tool.',
   dtLabel: 'The difference between return air temperature and supply air temperature — how many degrees the air drops crossing the evaporator coil. A normal range is roughly 16–22°F; outside that range usually points to an airflow or charge issue.',
@@ -747,6 +803,38 @@ const QUESTION_BANK = {
       yesEffect:-8, noEffect:14,
       yesNote:'A fan that starts cleanly and reaches full speed makes a weak capacitor less likely to be the whole story.',
       noNote:'A slow or hesitant start is a classic sign the fan capacitor isn\'t giving the motor the boost it needs.' }
+  ],
+  indoor_voltage_low: [
+    { id:'ivl_wiring', text:'Any loose, corroded, or burnt-looking wire connections at the indoor disconnect or blower relay?',
+      yesEffect:20, noEffect:-5,
+      yesNote:'Loose or corroded connections cause voltage drop right at the equipment — a very fixable cause of low voltage.',
+      noNote:'Clean connections point toward the low voltage coming from further upstream (wiring size, breaker, or utility supply).' }
+  ],
+  indoor_voltage_high: [
+    { id:'ivh_wiring', text:'Does this reading match what you\'d expect at the breaker panel, or does it seem isolated to this unit?',
+      yesEffect:10, noEffect:5,
+      yesNote:'A building-wide high reading points to the utility supply or panel rather than anything at the equipment.',
+      noNote:'An isolated high reading at the unit is worth a second look at the equipment\'s own wiring.' }
+  ],
+  amp_high_blower: [
+    { id:'ahb_cap', text:'Does the blower run capacitor look physically bulged, swollen, or leaking?',
+      yesEffect:20, noEffect:-5,
+      yesNote:'A bulged or leaking capacitor is a direct, visible sign of a failing capacitor forcing the blower motor to work harder.',
+      noNote:'A normal-looking capacitor doesn\'t rule it out electrically, but points away from the most common visible cause.' },
+    { id:'ahb_wheel', text:'Is the blower wheel visibly dirty or caked with debris?',
+      yesEffect:16, noEffect:-6,
+      yesNote:'A dirty blower wheel makes the motor work harder to move the same amount of air, which shows up directly as higher amp draw.',
+      noNote:'' }
+  ],
+  cap_blower: [
+    { id:'cb_bulge', text:'Does the capacitor look physically bulged, swollen, or leaking on the top or sides?',
+      yesEffect:18, noEffect:-6,
+      yesNote:'Physical bulging is a direct visible confirmation — a capacitor in this shape has lost capacitance and should be replaced regardless of what else is going on.',
+      noNote:'Capacitors can fail electrically before they show physical signs, so a normal appearance doesn\'t rule this out — trust the measured reading.' },
+    { id:'cb_start', text:'Does the blower hesitate, hum, or struggle before it starts running?',
+      yesEffect:14, noEffect:0,
+      yesNote:'A hard or hesitant start is a classic symptom of a weak run capacitor not giving the motor enough of a boost.',
+      noNote:'' }
   ]
 };
 
@@ -991,8 +1079,8 @@ const WIZ_STEPS = [
     options:[['txv','TXV / TEV'],['orifice','Fixed Orifice / Piston'],['unknown','Not Sure']] },
 
   { type:'intro', phase:'electrical', title:'Electrical — checked first, per EAR', desc:'Electrical problems can cause misleading airflow and refrigerant symptoms downstream, which is why this comes first. Got the data plate handy? Scan it below to autofill rated values — or tap Continue to skip that and enter everything by hand.', scanBtn:true },
-  { type:'field', id:'voltage', phase:'electrical' },
-  { type:'field', id:'ratedVoltage', phase:'electrical' },
+  { type:'field', id:'voltage', phase:'electrical', group:'OUTDOOR UNIT — DISCONNECT', groupClass:'grp-elec' },
+  { type:'field', id:'ratedVoltage', phase:'electrical', group:'OUTDOOR UNIT — DISCONNECT', groupClass:'grp-elec' },
   { type:'checkpoint', id:'chk_voltage', phase:'electrical', check:'voltage' },
   { type:'field', id:'compAmp', phase:'electrical', group:'COMPRESSOR', groupClass:'grp-elec' },
   { type:'field', id:'compRLA', phase:'electrical', group:'COMPRESSOR', groupClass:'grp-elec' },
@@ -1010,6 +1098,20 @@ const WIZ_STEPS = [
   { type:'field', id:'capFanAmps', phase:'electrical', group:'CAPACITOR — FAN SIDE', groupClass:'grp-elec', skipIf:()=> document.getElementById('fanMotorType').value === 'ecm' },
   { type:'field', id:'capFanVolts', phase:'electrical', group:'CAPACITOR — FAN SIDE', groupClass:'grp-elec', skipIf:()=> document.getElementById('fanMotorType').value === 'ecm' },
   { type:'checkpoint', id:'chk_cap', phase:'electrical', check:'capacitor' },
+
+  { type:'intro', phase:'electrical', title:'Now the Indoor Side', desc:'Same idea, different unit — the outdoor checks are done, so let\'s cover the furnace/air handler before moving on to Airflow.' },
+  { type:'field', id:'indoorVoltage', phase:'electrical', group:'INDOOR UNIT — DISCONNECT', groupClass:'grp-elec' },
+  { type:'field', id:'indoorRatedVoltage', phase:'electrical', group:'INDOOR UNIT — DISCONNECT', groupClass:'grp-elec' },
+  { type:'checkpoint', id:'chk_voltageIndoor', phase:'electrical', check:'voltageIndoor' },
+  { type:'field', id:'blowerAmp', phase:'electrical', group:'BLOWER MOTOR', groupClass:'grp-elec' },
+  { type:'field', id:'blowerFLA', phase:'electrical', group:'BLOWER MOTOR', groupClass:'grp-elec' },
+  { type:'checkpoint', id:'chk_ampBlower', phase:'electrical', check:'ampBlower' },
+  { type:'select', id:'blowerMotorType', phase:'electrical', title:'Indoor Blower Motor', desc:'Does the blower run off a capacitor, or is it board-driven (ECM / variable speed) with no capacitor at all?',
+    options:[['cap','Capacitor-Driven'],['ecm','Board-Driven (ECM) — No Capacitor']] },
+  { type:'field', id:'blowerCapRated', phase:'electrical', group:'BLOWER CAPACITOR', groupClass:'grp-elec', skipIf:()=> document.getElementById('blowerMotorType').value === 'ecm' },
+  { type:'field', id:'blowerCapAmps', phase:'electrical', group:'BLOWER CAPACITOR', groupClass:'grp-elec', skipIf:()=> document.getElementById('blowerMotorType').value === 'ecm' },
+  { type:'field', id:'blowerCapVolts', phase:'electrical', group:'BLOWER CAPACITOR', groupClass:'grp-elec', skipIf:()=> document.getElementById('blowerMotorType').value === 'ecm' },
+  { type:'checkpoint', id:'chk_capBlower', phase:'electrical', check:'capacitorBlower' },
 
   { type:'intro', phase:'airflow', title:'Airflow — second, per EAR', desc:'Refrigerant readings only mean what they\'re supposed to mean once airflow across the coil is confirmed correct — that\'s why this comes before Refrigerant.' },
   { type:'field', id:'ambient', phase:'airflow' },
@@ -1060,8 +1162,8 @@ const WIZ_CHECKS = {
     const v = num('voltage'), rv = num('ratedVoltage');
     if (v === null || !rv) return { status:'skip', msg:'Not enough info to check yet — both fields were left blank.' };
     const ratio = v / rv;
-    if (ratio < 0.95) return { status:'bad', msg:'Voltage is running low — '+v+'V against a rated '+rv+'V ('+Math.round(ratio*100)+'%). Low voltage alone can cause higher amp draw, nuisance trips, and misleading downstream symptoms.' };
-    if (ratio > 1.05) return { status:'bad', msg:'Voltage is running high — '+v+'V against a rated '+rv+'V ('+Math.round(ratio*100)+'%). Sustained overvoltage stresses motors and controls.' };
+    if (ratio < 0.95) return { status:'bad', msg:'Outdoor unit voltage is running low — '+v+'V against a rated '+rv+'V ('+Math.round(ratio*100)+'%). Low voltage alone can cause higher amp draw, nuisance trips, and misleading downstream symptoms.' };
+    if (ratio > 1.05) return { status:'bad', msg:'Outdoor unit voltage is running high — '+v+'V against a rated '+rv+'V ('+Math.round(ratio*100)+'%). Sustained overvoltage stresses motors and controls.' };
     return { status:'good', msg:'Voltage looks normal — '+v+'V against a rated '+rv+'V.' };
   },
   ampComp(){
@@ -1077,6 +1179,32 @@ const WIZ_CHECKS = {
     const ratio = a / r;
     if (ratio > 1.1) return { status:'bad', msg:'Condenser fan amp draw is running high — '+a+'A against a rated '+r+'A FLA ('+Math.round(ratio*100)+'% of rated). A motor working harder than it should fits a coil fighting for airflow, or a fan motor on its way out.' };
     return { status:'good', msg:'Condenser fan amp draw looks normal — '+a+'A against a rated '+r+'A FLA.' };
+  },
+  voltageIndoor(){
+    const v = num('indoorVoltage'), rv = num('indoorRatedVoltage');
+    if (v === null || !rv) return { status:'skip', msg:'Not enough info to check yet — both fields were left blank.' };
+    const ratio = v / rv;
+    if (ratio < 0.95) return { status:'bad', msg:'Indoor unit voltage is running low — '+v+'V against a rated '+rv+'V ('+Math.round(ratio*100)+'%). Low voltage alone can cause higher amp draw, nuisance trips, and misleading downstream symptoms.' };
+    if (ratio > 1.05) return { status:'bad', msg:'Indoor unit voltage is running high — '+v+'V against a rated '+rv+'V ('+Math.round(ratio*100)+'%). Sustained overvoltage stresses motors and controls.' };
+    return { status:'good', msg:'Indoor unit voltage looks normal — '+v+'V against a rated '+rv+'V.' };
+  },
+  ampBlower(){
+    const a = num('blowerAmp'), r = num('blowerFLA');
+    if (a === null || !r) return { status:'skip', msg:'Not enough info to check yet — both fields were left blank.' };
+    const ratio = a / r;
+    if (ratio > 1.1) return { status:'bad', msg:'Blower motor amp draw is running high — '+a+'A against a rated '+r+'A FLA ('+Math.round(ratio*100)+'% of rated). Check for a weak run capacitor, a dirty blower wheel/restricted airflow making the motor work harder, or a mechanical issue.' };
+    return { status:'good', msg:'Blower motor amp draw looks normal — '+a+'A against a rated '+r+'A FLA.' };
+  },
+  capacitorBlower(){
+    const tol = num('capTolerance') !== null ? num('capTolerance') : 6;
+    const isECM = document.getElementById('blowerMotorType').value === 'ecm';
+    const br = num('blowerCapRated'), ba = num('blowerCapAmps'), bv = num('blowerCapVolts');
+    const blowerMFD = (ba!==null && bv) ? (ba*2652/bv) : null;
+    const blowerDev = (blowerMFD!==null && br) ? ((blowerMFD-br)/br*100) : null;
+    const ecmNote = isECM ? ' Blower is board-driven (ECM) — no capacitor to check.' : '';
+    if (blowerDev === null) return { status:'skip', msg:'Not enough info to check yet — amps/volts/rating were left blank.'+ecmNote };
+    if (Math.abs(blowerDev) > tol) return { status:'bad', msg:'Blower capacitor is '+Math.abs(blowerDev).toFixed(1)+'% off your ±'+tol+'% allowance ('+blowerMFD.toFixed(1)+' µF vs '+br.toFixed(1)+' µF rated). A capacitor reading low is the common case — it loses capacitance with age and heat.' };
+    return { status:'good', msg:'Blower capacitor reading looks normal, within ±'+tol+'% of rated.'+ecmNote };
   },
   capacitor(){
     const tol = num('capTolerance') !== null ? num('capTolerance') : 6;
@@ -1267,7 +1395,8 @@ function wizRenderStep(){
     const CHECK_TITLES = {
       voltage:'Voltage Check', ampComp:'Compressor Amp Check', ampFan:'Condenser Fan Amp Check',
       capacitor:'Capacitor Check', static:'Static Pressure Check', airside:'Air Side Check',
-      charge:'Charge Check — Superheat / Subcooling'
+      charge:'Charge Check — Superheat / Subcooling',
+      voltageIndoor:'Indoor Voltage Check', ampBlower:'Blower Motor Amp Check', capacitorBlower:'Blower Capacitor Check'
     };
     const title = document.createElement('div');
     title.className = 'wiz-step-title';
@@ -1475,6 +1604,9 @@ function run(){
   const capTolerance = capToleranceIn !== null ? capToleranceIn : 6;
   const capCompRated = num('capCompRated'), capCompAmps = num('capCompAmps'), capCompVolts = num('capCompVolts');
   const capFanRated = num('capFanRated'), capFanAmps = num('capFanAmps'), capFanVolts = num('capFanVolts');
+  const indoorVoltage = num('indoorVoltage'), indoorRatedVoltage = num('indoorRatedVoltage');
+  const blowerAmp = num('blowerAmp'), blowerFLA = num('blowerFLA');
+  const blowerCapRated = num('blowerCapRated'), blowerCapAmps = num('blowerCapAmps'), blowerCapVolts = num('blowerCapVolts');
 
   const deltaT = (retDB!==null && supDB!==null) ? (retDB - supDB) : null;
   const enthalpyDrop = (retEnth!==null && supEnth!==null) ? (retEnth - supEnth) : null;
@@ -1482,6 +1614,8 @@ function run(){
   const voltRatio = (voltage!==null && ratedVoltage) ? (voltage/ratedVoltage) : null;
   const ampRatio = (compAmp!==null && compRLA) ? (compAmp/compRLA) : null;
   const fanAmpRatio = (fanAmp!==null && fanFLA) ? (fanAmp/fanFLA) : null;
+  const indoorVoltRatio = (indoorVoltage!==null && indoorRatedVoltage) ? (indoorVoltage/indoorRatedVoltage) : null;
+  const blowerAmpRatio = (blowerAmp!==null && blowerFLA) ? (blowerAmp/blowerFLA) : null;
 
   // Running capacitance test: MFD = (Amps × 2652) / Volts, measured across
   // Common-to-Herm (compressor) or Common-to-Fan while the system runs.
@@ -1489,6 +1623,8 @@ function run(){
   const capFanMFD = (capFanAmps!==null && capFanVolts) ? (capFanAmps*2652/capFanVolts) : null;
   const capCompDevPct = (capCompMFD!==null && capCompRated) ? ((capCompMFD-capCompRated)/capCompRated*100) : null;
   const capFanDevPct = (capFanMFD!==null && capFanRated) ? ((capFanMFD-capFanRated)/capFanRated*100) : null;
+  const blowerCapMFD = (blowerCapAmps!==null && blowerCapVolts) ? (blowerCapAmps*2652/blowerCapVolts) : null;
+  const blowerCapDevPct = (blowerCapMFD!==null && blowerCapRated) ? ((blowerCapMFD-blowerCapRated)/blowerCapRated*100) : null;
 
   function renderCapReadout(elId, measured, rated, devPct){
     const el = document.getElementById(elId);
@@ -1504,6 +1640,7 @@ function run(){
   }
   renderCapReadout('capCompReadout', capCompMFD, capCompRated, capCompDevPct);
   renderCapReadout('capFanReadout', capFanMFD, capFanRated, capFanDevPct);
+  renderCapReadout('blowerCapReadout', blowerCapMFD, blowerCapRated, blowerCapDevPct);
 
   const shValue = document.getElementById('shValue');
   const shMeta = document.getElementById('shMeta');
@@ -1704,15 +1841,15 @@ function run(){
       const score = clamp((0.95-voltRatio)/(0.95-0.85)*100, 0, 100);
       voltFlag = 'low';
       findings.push({
-        cat: 'electrical', id: 'voltage_low', title: 'Low Supply Voltage', score,
-        detail: 'Line voltage measured <b>'+fmt(voltage)+'V</b> against a rated <b>'+fmt(ratedVoltage)+'V</b> — that\'s '+(voltRatio*100).toFixed(0)+'% of rated, outside the normal ±10% motor tolerance. Low voltage makes every motor in the system pull more current to do the same work, can cause nuisance overloads or short-cycling, and should be checked (loose connections, undersized wire, utility supply) before chasing a refrigerant-side cause.'
+        cat: 'electrical', id: 'voltage_low', title: 'Low Voltage — Outdoor Unit', score,
+        detail: 'Line voltage at the outdoor disconnect measured <b>'+fmt(voltage)+'V</b> against a rated <b>'+fmt(ratedVoltage)+'V</b> — that\'s '+(voltRatio*100).toFixed(0)+'% of rated, outside the normal ±10% motor tolerance. Low voltage makes every motor in the system pull more current to do the same work, can cause nuisance overloads or short-cycling, and should be checked (loose connections, undersized wire, utility supply) before chasing a refrigerant-side cause.'
       });
     } else if (voltRatio > 1.05){
       const score = clamp((voltRatio-1.05)/(1.15-1.05)*100, 0, 100);
       voltFlag = 'high';
       findings.push({
-        cat: 'electrical', id: 'voltage_high', title: 'High Supply Voltage', score,
-        detail: 'Line voltage measured <b>'+fmt(voltage)+'V</b> against a rated <b>'+fmt(ratedVoltage)+'V</b> — that\'s '+(voltRatio*100).toFixed(0)+'% of rated, outside the normal ±10% motor tolerance. Sustained overvoltage stresses motor windings and controls over time — worth a call to the utility or an electrician if it\'s consistent.'
+        cat: 'electrical', id: 'voltage_high', title: 'High Voltage — Outdoor Unit', score,
+        detail: 'Line voltage at the outdoor disconnect measured <b>'+fmt(voltage)+'V</b> against a rated <b>'+fmt(ratedVoltage)+'V</b> — that\'s '+(voltRatio*100).toFixed(0)+'% of rated, outside the normal ±10% motor tolerance. Sustained overvoltage stresses motor windings and controls over time — worth a call to the utility or an electrician if it\'s consistent.'
       });
     }
   }
@@ -1749,6 +1886,47 @@ function run(){
       cat: 'electrical', id: 'cap_fan', title: 'Condenser Fan Run Capacitor Out of Tolerance', score,
       detail: 'Measured capacitance on the condenser fan (Common-to-Fan) side works out to <b>'+capFanMFD.toFixed(1)+' µF</b> against a rated <b>'+capFanRated.toFixed(1)+' µF</b> — that\'s '+Math.abs(capFanDevPct).toFixed(1)+'% off, outside your ±'+capTolerance+'% allowance ('+dir+').'
         + (capFanDevPct < 0 ? ' A weak fan capacitor often shows up as a fan that spins slowly, hums without starting, or struggles to reach full speed — which reduces condenser airflow the same way a dirty coil does.' : ' A capacitor reading high usually means the wrong replacement value was installed at some point.')
+    });
+  }
+
+  // Indoor side — same three checks, mirrored for the furnace/air handler.
+  let indoorVoltFlag = null;
+  if (indoorVoltRatio !== null){
+    if (indoorVoltRatio < 0.95){
+      const score = clamp((0.95-indoorVoltRatio)/(0.95-0.85)*100, 0, 100);
+      indoorVoltFlag = 'low';
+      findings.push({
+        cat: 'electrical', id: 'indoor_voltage_low', title: 'Low Voltage — Indoor Unit', score,
+        detail: 'Line voltage at the indoor disconnect measured <b>'+fmt(indoorVoltage)+'V</b> against a rated <b>'+fmt(indoorRatedVoltage)+'V</b> — that\'s '+(indoorVoltRatio*100).toFixed(0)+'% of rated, outside the normal ±10% motor tolerance. Low voltage makes every motor in the system pull more current to do the same work, can cause nuisance overloads or short-cycling, and should be checked (loose connections, undersized wire, breaker) before chasing anything else.'
+      });
+    } else if (indoorVoltRatio > 1.05){
+      const score = clamp((indoorVoltRatio-1.05)/(1.15-1.05)*100, 0, 100);
+      indoorVoltFlag = 'high';
+      findings.push({
+        cat: 'electrical', id: 'indoor_voltage_high', title: 'High Voltage — Indoor Unit', score,
+        detail: 'Line voltage at the indoor disconnect measured <b>'+fmt(indoorVoltage)+'V</b> against a rated <b>'+fmt(indoorRatedVoltage)+'V</b> — that\'s '+(indoorVoltRatio*100).toFixed(0)+'% of rated, outside the normal ±10% motor tolerance. Sustained overvoltage stresses motor windings and controls over time — worth a call to the utility or an electrician if it\'s consistent.'
+      });
+    }
+  }
+
+  if (blowerAmpRatio !== null && blowerAmpRatio > 1.1){
+    const blowerCapBad = blowerCapDevPct !== null && Math.abs(blowerCapDevPct) > capTolerance;
+    const score = clamp((blowerAmpRatio-1.1)/(1.4-1.1)*100 + (blowerCapBad?10:0), 0, 100);
+    findings.push({
+      cat: 'electrical', id: 'amp_high_blower', title: 'High Blower Motor Amp Draw', score,
+      detail: 'Blower motor is pulling <b>'+fmt(blowerAmp)+'A</b> against a rated <b>'+fmt(blowerFLA)+'A</b> FLA — running '+(blowerAmpRatio*100).toFixed(0)+'% of rated load.'
+        + (indoorVoltFlag === 'low' ? ' With indoor line voltage also reading low, that\'s the more likely explanation here — a motor pulls more amps to make up for lower voltage.' : blowerCapBad ? ' The blower run capacitor is testing outside tolerance too ('+blowerCapMFD.toFixed(1)+' µF vs '+blowerCapRated.toFixed(1)+' µF rated) — that\'s very likely the cause.' : ' Check for a weak run capacitor, a dirty blower wheel or restricted airflow making the motor work harder, or a mechanical issue in the motor itself.')
+    });
+  }
+
+  if (blowerCapDevPct !== null && Math.abs(blowerCapDevPct) > capTolerance){
+    const over = Math.abs(blowerCapDevPct) - capTolerance;
+    const score = clamp(28 + over*3, 0, 100);
+    const dir = blowerCapDevPct < 0 ? 'reading low' : 'reading high';
+    findings.push({
+      cat: 'electrical', id: 'cap_blower', title: 'Blower Motor Run Capacitor Out of Tolerance', score,
+      detail: 'Measured capacitance on the blower motor capacitor works out to <b>'+blowerCapMFD.toFixed(1)+' µF</b> against a rated <b>'+blowerCapRated.toFixed(1)+' µF</b> — that\'s '+Math.abs(blowerCapDevPct).toFixed(1)+'% off, outside your ±'+capTolerance+'% allowance ('+dir+').'
+        + (blowerCapDevPct < 0 ? ' A capacitor reading low is the far more common case — it\'s slowly losing capacitance with age and heat, which shows up as a hard-starting or weaker-running blower.' : ' A capacitor reading high usually means the wrong replacement value was installed at some point.')
     });
   }
 
