@@ -1410,7 +1410,7 @@ const WIZ_CHECKS = {
     if (enthLow){ bad = true; notes.push('enthalpy drop is low at '+enthDrop.toFixed(1)+' Btu/lb, suggesting low total capacity'); }
     let msg = notes.join('; ') + '.';
     if (enthLow){
-      msg += ' Enthalpy is the total heat in the air — the temperature drop you can feel (sensible heat) plus the moisture pulled out of it (latent heat), combined into one number, not just what a thermometer alone shows. That\'s why delta T and enthalpy drop can disagree like this: the air is dropping a normal number of degrees, but the system isn\'t pulling much total heat-plus-moisture out of it overall — which points to reduced real capacity (low airflow, low charge, or a dirty coil) even though the plain temperature swing looks fine on its own.';
+      msg += ' Enthalpy is the total heat in the air, combining two things into one number:<br>• <b>Sensible heat</b> — the heat you can feel and measure with a thermometer; this is what drives delta T.<br>• <b>Latent heat</b> — the heat tied up in moisture, removed by condensing water vapor out of the air; it doesn\'t show up as a temperature change at all, only in humidity and enthalpy.<br>That\'s why delta T and enthalpy drop can disagree like this: the air is dropping a normal number of degrees (sensible heat looks fine), but the system isn\'t removing much total heat-plus-moisture overall (latent heat is falling short) — which points to reduced real capacity (low airflow, low charge, or a dirty coil) even though the plain temperature swing looks fine on its own.';
     }
     return { status: bad ? 'bad' : 'good', msg };
   },
@@ -1642,7 +1642,18 @@ function wizFinish(){
 }
 
 function isStepSkipped(step){
-  return !!(step.skipIf && step.skipIf());
+  if (step.skipIf && step.skipIf()) return true;
+  if (step.type === 'checkpoint'){
+    // A checkpoint only earns its own slide when it actually has something
+    // to flag. "Looks normal, moving on" and "nothing to check here" (e.g.
+    // a capacitor checkpoint when that motor is board-driven/ECM) don't —
+    // the tech already knows what they entered, so re-confirming it back
+    // to them wastes a screen. The scoring itself is unaffected either
+    // way; this only changes what gets its own slide during entry.
+    const result = WIZ_CHECKS[step.check] ? WIZ_CHECKS[step.check]() : null;
+    if (!result || result.status !== 'bad') return true;
+  }
+  return false;
 }
 
 function wizDefaultNextAction(){
@@ -1776,9 +1787,20 @@ function buildManagerSummary(){
   lines.push('QUICKDIAG SUMMARY');
   lines.push(sysType + ', ' + refrigerant + (metering ? ', ' + metering : ''));
 
+  const targetSH = document.getElementById('targetSH').value;
+  const targetSC = document.getElementById('targetSC').value;
+  if (targetSH || targetSC) lines.push('Rated Superheat: ' + (targetSH || '—') + '°F   Rated Subcooling: ' + (targetSC || '—') + '°F');
+
   const sh = document.getElementById('actualSH').value;
   const sc = document.getElementById('actualSC').value;
-  if (sh || sc) lines.push('Superheat: ' + (sh || '—') + '°F   Subcooling: ' + (sc || '—') + '°F');
+  if (sh || sc) lines.push('Actual Superheat: ' + (sh || '—') + '°F   Actual Subcooling: ' + (sc || '—') + '°F');
+
+  const suctionT = document.getElementById('suctionT').value;
+  const liquidT = document.getElementById('liquidT').value;
+  if (suctionT || liquidT) lines.push('Suction Line Temp: ' + (suctionT || '—') + '°F   Liquid Line Temp: ' + (liquidT || '—') + '°F');
+
+  const vaporSat = document.getElementById('vaporSat').value;
+  if (vaporSat) lines.push('Vapor Saturation: ' + vaporSat + '°F');
 
   const ambient = document.getElementById('ambient').value;
   if (ambient) lines.push('Outdoor Ambient: ' + ambient + '°F');
@@ -1789,14 +1811,6 @@ function buildManagerSummary(){
 
   const tesp = document.getElementById('tespValue').textContent.trim();
   if (tesp && !tesp.startsWith('—')) lines.push('TESP: ' + tesp);
-
-  const volt = document.getElementById('voltage').value;
-  const compAmp = document.getElementById('compAmp').value;
-  if (volt || compAmp) lines.push('Outdoor Voltage: ' + (volt || '—') + 'V   Compressor Amp: ' + (compAmp || '—') + 'A');
-
-  const indoorVolt = document.getElementById('indoorVoltage').value;
-  const blowerAmp = document.getElementById('blowerAmp').value;
-  if (indoorVolt || blowerAmp) lines.push('Indoor Voltage: ' + (indoorVolt || '—') + 'V   Blower Amp: ' + (blowerAmp || '—') + 'A');
 
   lines.push('');
 
