@@ -481,6 +481,14 @@
     ELECTRICAL
     <button type="button" class="scan-btn" id="scanBtn">📷 Scan Data Plate</button>
   </div>
+  <div class="field" style="margin:16px 16px 0;">
+    <label for="waterSwitchTripped">Condensate Safety Switch Check</label>
+    <select id="waterSwitchTripped">
+      <option value="unanswered"></option>
+      <option value="no">No — None Tripped</option>
+      <option value="yes">Yes — One or More Tripped</option>
+    </select>
+  </div>
   <input type="file" id="plateInput" accept="image/*" capture="environment" style="display:none;">
   <div id="scanPanel" class="scan-panel">
     <div class="scan-panel-inner">
@@ -753,6 +761,7 @@ const FIELD_GUIDE = {
   supEnth: 'The total heat content of the supply air — sensible plus latent — in Btu per pound of air, after it\'s passed through the coil.',
   supStatic: 'Air pressure in the supply duct right after the equipment, measured with a manometer or static probe — positive, since the blower is pushing air into it.',
   retStatic: 'Air pressure in the return duct right before the equipment — normally negative, since the blower is pulling out of that side.',
+  waterSwitchTripped: 'A tripped condensate/float switch shuts the system down (or blocks a call for cooling) to prevent water damage — it\'s a safety feature, not a fault in the refrigerant circuit or the equipment itself. Many systems have more than one: a primary drain pan switch, a secondary/emergency pan switch (common in attics), and sometimes an inline switch in the drain line. Any one of them tripping is enough to stop the system.',
   voltage: 'The actual line voltage measured at the outdoor unit\'s disconnect or contactor, with the system running — not the indoor unit. This is what gets compared against compressor amp draw, since low voltage there is what makes a compressor pull extra current.',
   ratedVoltage: 'The nameplate voltage the outdoor unit is designed for, e.g. 230V — check the outdoor unit\'s own data plate. Motors are built to tolerate roughly ±10% of this before it becomes a real problem.',
   ratedVoltageHigh: 'Only needed if the data plate shows two numbers instead of one, like "208-230V" — common on dual-voltage-rated equipment. Enter the low number in Rated Voltage above and the high number here. Anything measured between the two is treated as fully normal, not just close to one figure.',
@@ -1247,6 +1256,9 @@ const WIZ_STEPS = [
   { type:'select', id:'metering', phase:'setup', title:'Metering Device', desc:'TXV, fixed orifice, or not sure?',
     options:[['txv','TXV / TEV'],['orifice','Fixed Orifice / Piston'],['unknown','Not Sure']] },
 
+  { type:'select', id:'waterSwitchTripped', phase:'electrical', title:'Condensate Safety Switch Check', desc:'Check every condensate/water safety switch on this system — a lot of them have two or three: one in the primary drain pan, one in a secondary/emergency pan (common on attic installs), and sometimes an inline switch in the drain line itself. A tripped switch will block the system from running at all, no matter what else is going on. Is any of them tripped?',
+    options:[['no','No — None Tripped'],['yes','Yes — One or More Tripped']] },
+  { type:'checkpoint', id:'chk_waterSwitch', phase:'electrical', check:'waterSwitch' },
   { type:'intro', phase:'electrical', title:'Electrical — checked first, per EAR', desc:'Electrical problems can cause misleading airflow and refrigerant symptoms downstream, which is why this comes first. Got the data plate handy? Scan it below to autofill rated values — or tap Continue to skip that and enter everything by hand.', scanBtn:true },
   { type:'field', id:'voltage', phase:'electrical', group:'OUTDOOR UNIT — DISCONNECT', groupClass:'grp-elec' },
   { type:'field', id:'ratedVoltage', phase:'electrical', group:'OUTDOOR UNIT — DISCONNECT', groupClass:'grp-elec' },
@@ -1331,6 +1343,12 @@ const WIZ_PHASE_LABEL = { setup:'SETUP', electrical:'ELECTRICAL', airflow:'AIRFL
 //   TESP >130%/<70% of rated, delta T >23°F/<14°F, enthalpy drop <8 Btu/lb,
 //   superheat/subcool ±4°F/±3°F of target.
 const WIZ_CHECKS = {
+  waterSwitch(){
+    const val = document.getElementById('waterSwitchTripped').value;
+    if (val === 'unanswered') return { status:'skip', msg:'Not answered yet — go check the switches before continuing.' };
+    if (val === 'yes') return { status:'bad', msg:'A tripped switch will block the system from running (or shut it down) regardless of refrigerant charge, airflow, or anything else — this is very likely the whole problem. Check for a clogged or kinked condensate line, a full or overflowing drain pan, a disconnected P-trap, or algae/sludge buildup. Clear the blockage and confirm proper drainage before resetting or replacing the switch.' };
+    return { status:'good', msg:'No safety switch is blocking the system — clear to continue.' };
+  },
   voltage(){
     const v = num('voltage'), rv = num('ratedVoltage'), rvh = num('ratedVoltageHigh');
     if (v === null || !rv) return { status:'skip', msg:'Not enough info to check yet — both fields were left blank.' };
@@ -1580,6 +1598,7 @@ function wizRenderStep(){
 
   else if (step.type === 'checkpoint'){
     const CHECK_TITLES = {
+      waterSwitch:'Condensate Safety Switch Check',
       voltage:'Voltage Check', ampComp:'Compressor Amp Check', ampFan:'Condenser Fan Amp Check',
       capacitor:'Capacitor Check', static:'Static Pressure Check', airside:'Air Side Check',
       charge:'Charge Check — Superheat / Subcooling',
@@ -1975,7 +1994,8 @@ function run(){
   }
 
   const diagContent = document.getElementById('diagContent');
-  if (actualSH === null || actualSC === null){
+  const waterSwitchTrippedEarly = document.getElementById('waterSwitchTripped').value === 'yes';
+  if ((actualSH === null || actualSC === null) && !waterSwitchTrippedEarly){
     diagContent.innerHTML = '<div class="empty-state">Enter actual superheat and actual subcooling (plus outdoor ambient) to run the diagnosis. Air side readings sharpen the airflow-related findings.</div>';
     return;
   }
@@ -2117,6 +2137,18 @@ function run(){
     findings.push({
       cat: 'airflow', id: 'humidity', title: 'Weak Latent Removal (High Supply Humidity)', score,
       detail: 'Supply air relative humidity is <b>'+fmt(supRH)+'%</b>, higher than you\'d want to see leaving the coil. Short cycling, oversized equipment, or excess airflow across the coil can all limit dehumidification even when sensible cooling looks fine.'
+    });
+  }
+
+  // A tripped condensate safety switch is checked before anything else in
+  // Electrical because, if it's tripped, it explains a no-run/no-cool
+  // complaint completely on its own — refrigerant charge, airflow, and
+  // every other electrical reading are beside the point until it's cleared.
+  const waterSwitchVal = document.getElementById('waterSwitchTripped').value;
+  if (waterSwitchVal === 'yes'){
+    findings.push({
+      cat: 'electrical', id: 'water_switch', title: 'Condensate Safety Switch Tripped', score: 98,
+      detail: 'A tripped float switch — whether it\'s the primary drain pan, a secondary/emergency pan, or an inline drain line switch — will block the system from running or shut it down entirely, independent of refrigerant charge, airflow, or anything else measured here. Check for a clogged or kinked condensate line, a full or overflowing drain pan, a disconnected P-trap, or algae/sludge buildup in the line. Clear the blockage and confirm proper drainage before resetting or replacing the switch.'
     });
   }
 
