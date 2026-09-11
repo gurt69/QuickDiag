@@ -40,6 +40,16 @@
   .nameplate h1{font-family:'Oswald',sans-serif;font-weight:700;font-size:30px;letter-spacing:0.04em;margin:0;color:#f4f1e8;}
   .nameplate .tag{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--amber);letter-spacing:0.03em;}
   .nameplate p{margin:6px 0 0;font-size:13.5px;color:#b7bdb1;max-width:66ch;line-height:1.5;}
+
+  .splash{margin:16px 16px 0;}
+  .splash-section{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;}
+  .splash-section.splash-warn{background:var(--warn-soft);border-color:#d9bb7a;}
+  .splash-head{font-family:'Oswald',sans-serif;font-weight:700;font-size:13.5px;letter-spacing:0.03em;color:var(--ink);margin-bottom:6px;}
+  .splash-warn .splash-head{color:#5e4009;}
+  .splash-section p{font-size:13px;line-height:1.55;color:#2c3236;margin:0;}
+  .splash-warn p{color:#5e4009;}
+  .splash-btn{width:100%;font-family:'Oswald',sans-serif;font-weight:700;font-size:15px;letter-spacing:0.05em;background:var(--amber);color:var(--plate);border:none;border-radius:var(--radius);padding:14px;cursor:pointer;margin-top:6px;}
+  .splash-btn:hover{background:var(--amber-deep);color:#fff;}
   .guide-toggle{margin-top:12px;font-family:'Oswald',sans-serif;font-size:11.5px;font-weight:600;letter-spacing:0.05em;background:transparent;border:1px solid var(--amber);color:var(--amber);padding:6px 12px;border-radius:2px;cursor:pointer;}
   .guide-toggle:hover{background:var(--amber);color:var(--plate);}
   .guide-toggle.on{background:var(--amber);color:var(--plate);}
@@ -243,6 +253,7 @@
   .results-banner{display:flex;gap:10px;margin:16px 16px 0;flex-wrap:wrap;}
   .results-edit-btn{flex:1 1 auto;font-family:'Oswald',sans-serif;font-weight:600;font-size:12.5px;letter-spacing:0.03em;padding:11px;border-radius:var(--radius);border:1px solid var(--amber-deep);background:#fff;color:var(--amber-deep);cursor:pointer;}
   .results-edit-btn:hover{background:var(--warn-soft);}
+  .summary-textarea{width:100%;font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:1.5;padding:12px;border:1px solid var(--line);border-radius:2px;background:#fff;color:var(--ink);margin-bottom:10px;resize:vertical;}
 
   .wiz-review-list{display:flex;flex-direction:column;gap:2px;max-height:50vh;overflow-y:auto;}
   .wiz-review-phase{font-family:'Oswald',sans-serif;font-weight:700;font-size:12px;letter-spacing:0.05em;color:var(--ink-soft);margin:12px 0 6px;}
@@ -266,7 +277,27 @@
     <button type="button" class="guide-toggle" id="guideToggle">Show Field Guide</button>
   </div>
 
-  <div id="wizard" class="wizard">
+  <div id="splashScreen" class="splash">
+    <div class="splash-section">
+      <div class="splash-head">What This Is</div>
+      <p>A field reference tool for building diagnostic intuition — not a certified diagnosis. It reasons only from what you type in; it can't see the equipment, verify wiring, or replace a hands-on inspection. Treat every result as where to start looking, not a final call.</p>
+    </div>
+    <div class="splash-section splash-warn">
+      <div class="splash-head">⚠ Electrical Safety</div>
+      <p>Run capacitors can hold a lethal charge even with the system fully powered off. Always properly discharge a capacitor before touching its terminals, and follow lockout/tagout procedures. Never work on energized components without the training and PPE your job requires.</p>
+    </div>
+    <div class="splash-section splash-warn">
+      <div class="splash-head">⚠ Refrigerant Safety</div>
+      <p>Follow EPA Section 608 refrigerant handling requirements at all times. Never vent refrigerant to atmosphere.</p>
+    </div>
+    <div class="splash-section">
+      <div class="splash-head">Before You Charge Anything</div>
+      <p>Always verify target superheat/subcooling against the unit's own data plate, access panel sticker, or install manual when available, and confirm any finding here against your own judgment and training before acting on it.</p>
+    </div>
+    <button type="button" class="splash-btn" id="splashBegin">I Understand — Begin</button>
+  </div>
+
+  <div id="wizard" class="wizard" style="display:none;">
     <div class="wizard-progress">
       <div class="wizard-progress-bar"><div class="wizard-progress-fill" id="wizProgressFill"></div></div>
       <div class="wizard-progress-label" id="wizProgressLabel"></div>
@@ -584,8 +615,21 @@
   <div id="resultsSection" style="display:none;">
   <div class="results-banner">
     <button type="button" class="results-edit-btn" id="reviewBtn">✎ Review &amp; Edit Readings</button>
+    <button type="button" class="results-edit-btn" id="summaryBtn">📋 Summary for Manager</button>
     <button type="button" class="results-edit-btn" id="startOverBtn">↺ Start Over</button>
   </div>
+
+  <div id="summaryPanel" class="scan-panel">
+    <div class="scan-panel-inner">
+      <div class="wiz-step-title" style="margin-bottom:6px;">Summary for Manager</div>
+      <div class="wiz-step-desc" style="margin-bottom:12px;">Review this before sending — edit anything you want to change, then copy it into a text.</div>
+      <textarea id="summaryText" class="summary-textarea" rows="12"></textarea>
+      <div class="scan-status" id="summaryCopyStatus"></div>
+      <button type="button" class="confirm-btn" id="summaryCopyBtn" style="margin-bottom:10px;">Copy to Clipboard</button>
+      <button type="button" class="scan-close" id="summaryClose">Close</button>
+    </div>
+  </div>
+
   <div class="readouts">
     <div class="readout">
       <div class="rlabel" id="shLabel">SUPERHEAT</div>
@@ -1716,7 +1760,110 @@ document.getElementById('startOverBtn').addEventListener('click', ()=>{
   window.scrollTo(0,0);
 });
 
+// ---- Summary for Manager ----
+// Builds a plain-text summary by reading the diagnosis that's already
+// rendered on screen — not by touching run()'s internals — so this stays
+// completely decoupled from the (already-tested) diagnosis logic and can
+// never affect it.
+function buildManagerSummary(){
+  const lines = [];
+  const sysLabels = { straightac:'Straight AC', heatpump:'Heat Pump', packageunit:'Package Unit' };
+  const meterLabels = { txv:'TXV/TEV', orifice:'Fixed Orifice', unknown:'metering unknown' };
+  const refrigerant = document.getElementById('refrigerant').value;
+  const sysType = sysLabels[document.getElementById('sysType').value] || document.getElementById('sysType').value;
+  const metering = meterLabels[document.getElementById('metering').value] || '';
+
+  lines.push('QUICKDIAG SUMMARY');
+  lines.push(sysType + ', ' + refrigerant + (metering ? ', ' + metering : ''));
+
+  const sh = document.getElementById('actualSH').value;
+  const sc = document.getElementById('actualSC').value;
+  if (sh || sc) lines.push('Superheat: ' + (sh || '—') + '°F   Subcooling: ' + (sc || '—') + '°F');
+
+  const ambient = document.getElementById('ambient').value;
+  if (ambient) lines.push('Outdoor Ambient: ' + ambient + '°F');
+
+  const dt = document.getElementById('dtValue').textContent.trim();
+  const ed = document.getElementById('edValue').textContent.trim();
+  if (dt !== '— °F' || ed !== '—') lines.push('Delta T: ' + dt + '   Enthalpy Drop: ' + ed);
+
+  const tesp = document.getElementById('tespValue').textContent.trim();
+  if (tesp && !tesp.startsWith('—')) lines.push('TESP: ' + tesp);
+
+  const volt = document.getElementById('voltage').value;
+  const compAmp = document.getElementById('compAmp').value;
+  if (volt || compAmp) lines.push('Outdoor Voltage: ' + (volt || '—') + 'V   Compressor Amp: ' + (compAmp || '—') + 'A');
+
+  const indoorVolt = document.getElementById('indoorVoltage').value;
+  const blowerAmp = document.getElementById('blowerAmp').value;
+  if (indoorVolt || blowerAmp) lines.push('Indoor Voltage: ' + (indoorVolt || '—') + 'V   Blower Amp: ' + (blowerAmp || '—') + 'A');
+
+  lines.push('');
+
+  const findingEls = document.querySelectorAll('#diagContent .finding');
+  if (!findingEls.length){
+    lines.push('No diagnosis run yet — enter superheat and subcooling first.');
+  } else {
+    lines.push('Ranked findings:');
+    findingEls.forEach((el, i)=>{
+      const titleEl = el.querySelector('.finding-title');
+      const confEl = el.querySelector('.conf');
+      if (!titleEl) return;
+      const title = titleEl.textContent.replace('— check this first', '').trim();
+      const conf = confEl ? confEl.textContent.trim() : '';
+      lines.push((i+1) + '. ' + title + (conf ? ' [' + conf + ']' : ''));
+    });
+  }
+
+  lines.push('');
+  lines.push('Sent from QuickDiag — field reference tool, not a final call. Verify before acting.');
+  return lines.join('\n');
+}
+
+function openSummaryPanel(){
+  document.getElementById('summaryText').value = buildManagerSummary();
+  document.getElementById('summaryCopyStatus').textContent = '';
+  document.getElementById('summaryPanel').classList.add('open');
+}
+function closeSummaryPanel(){
+  document.getElementById('summaryPanel').classList.remove('open');
+}
+document.getElementById('summaryBtn').addEventListener('click', openSummaryPanel);
+document.getElementById('summaryClose').addEventListener('click', closeSummaryPanel);
+document.getElementById('summaryPanel').addEventListener('click', (e)=>{
+  if (e.target === document.getElementById('summaryPanel')) closeSummaryPanel();
+});
+document.addEventListener('keydown', (e)=>{
+  if (e.key === 'Escape') closeSummaryPanel();
+});
+
+document.getElementById('summaryCopyBtn').addEventListener('click', async ()=>{
+  const textarea = document.getElementById('summaryText');
+  const status = document.getElementById('summaryCopyStatus');
+  const text = textarea.value;
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      await navigator.clipboard.writeText(text);
+      status.textContent = 'Copied — paste it into your text.';
+    } else {
+      throw new Error('Clipboard API unavailable');
+    }
+  } catch(err){
+    // Fallback that works everywhere: select the text so the tech can
+    // copy it manually (long-press → Copy on mobile, Ctrl/Cmd+C on desktop).
+    textarea.focus();
+    textarea.select();
+    status.textContent = 'Couldn\'t auto-copy — text is selected, copy it manually (long-press → Copy).';
+  }
+});
+
 wizRenderStep();
+
+document.getElementById('splashBegin').addEventListener('click', ()=>{
+  document.getElementById('splashScreen').style.display = 'none';
+  document.getElementById('wizard').style.display = 'block';
+  window.scrollTo(0,0);
+});
 
 function run(){
   const refrigerant = document.getElementById('refrigerant').value;
