@@ -215,6 +215,8 @@
   .wiz-phase-badge.refrigerant{background:var(--low-blue);color:#fff;}
   .wiz-step-title{font-family:'Oswald',sans-serif;font-weight:700;font-size:20px;color:var(--ink);margin-bottom:6px;}
   .wiz-step-desc{font-size:13.5px;line-height:1.55;color:#3a4147;margin-bottom:18px;}
+  .wiz-field-slot{margin-bottom:16px;}
+  .wiz-field-slot:last-child{margin-bottom:0;}
   .wiz-field-slot .field label{font-size:12px;}
 
   .wiz-group-tag{display:inline-block;font-family:'Oswald',sans-serif;font-weight:700;font-size:12px;letter-spacing:0.07em;padding:5px 11px;border-radius:2px;margin-bottom:12px;}
@@ -734,7 +736,7 @@ function evalVoltageRange(measured, low, high){
 const FIELD_GUIDE = {
   refrigerant: 'What refrigerant is in this system — check the equipment nameplate or the line set label. Different refrigerants run at different pressures for the same temperature, so this changes what a "normal" gauge reading looks like.',
   sysType: 'Straight AC: a standard split system, cooling only, usually paired with a furnace that handles the heat. Heat Pump: same idea but reversible — this tool assumes it\'s running in cooling mode. Package Unit: everything (compressor, both coils, and often a gas furnace) built and charged together in one pre-sized outdoor cabinet, common on roofs and slabs — no line set length to throw the charge off since there\'s no field-run line set. Factory charge still isn\'t a guarantee (assembly errors, shipping damage) — verify with superheat/subcooling like anything else.',
-  metering: 'The part that controls how much liquid refrigerant enters the evaporator. A TXV adjusts on the fly to hold a steady superheat, so subcooling is the more reliable number to charge by. A fixed orifice/piston is a fixed hole with no adjustment, so superheat is the more reliable number to charge by.',
+  metering: 'The part that controls how much liquid refrigerant enters the evaporator. A TXV adjusts on the fly to hold a steady superheat, so subcooling is the more reliable number to charge by. A fixed orifice/piston is a fixed hole with no adjustment, so superheat is the more reliable number to charge by. To identify which one\'s installed: look at the evaporator inlet — a TXV has a bulb clamped onto the suction line (connected by a thin capillary tube) and usually an adjustable stem or cap; a fixed orifice is just a small fitting inline in the liquid line with no bulb and no adjustment.',
   filterVerified: 'A dirty filter is the single most common cause of restricted airflow, and it throws off delta T, static pressure, and every downstream refrigerant reading. Confirming it\'s clean now rules out the most likely culprit before you take the rest of these measurements.',
   ambient: 'The outdoor air temperature right now, measured near the condenser. Head pressure should track ambient — roughly 20–35°F of saturated condensing temp above whatever this reads.',
   targetSH: 'The superheat this specific unit is designed to run at — not a universal number, and often not on the main data plate. Check inside the unit\'s access panel or control box first: many manufacturers print the actual charging chart on a sticker in there rather than on the exterior nameplate. If you truly can\'t find it, this tool assumes 12°F as a rough placeholder — treat that as a last resort, not a target to charge to.',
@@ -1253,82 +1255,51 @@ const WIZ_STEPS = [
     options:[['R410A','R-410A'],['R22','R-22'],['R32','R-32'],['R454B','R-454B']] },
   { type:'select', id:'sysType', phase:'setup', title:'System Type', desc:'What kind of system are you working on?',
     options:[['straightac','Straight AC'],['heatpump','Heat Pump (cooling mode)'],['packageunit','Package Unit (Gas Pack)']], showPkgTip:true },
-  { type:'select', id:'metering', phase:'setup', title:'Metering Device', desc:'TXV, fixed orifice, or not sure?',
+  { type:'select', id:'metering', phase:'setup', title:'Metering Device', desc:'Not sure just by looking? Here\'s the standard way to tell, right at the evaporator inlet: a TXV has a bulb clamped onto the suction line (connected to the valve body by a thin capillary tube), usually with an adjustable stem or cap on the valve itself — the bulb is the giveaway, it\'s the one thing a fixed orifice never has. A fixed orifice/piston is just a small brass or plastic fitting inline in the liquid line — no bulb, no capillary tube, no adjustment. If you still can\'t tell, the equipment\'s spec sheet or install manual will say.',
     options:[['txv','TXV / TEV'],['orifice','Fixed Orifice / Piston'],['unknown','Not Sure']] },
 
   { type:'select', id:'waterSwitchTripped', phase:'electrical', title:'Condensate Safety Switch Check', desc:'Check every condensate/water safety switch on this system — a lot of them have two or three: one in the primary drain pan, one in a secondary/emergency pan (common on attic installs), and sometimes an inline switch in the drain line itself. A tripped switch will block the system from running at all, no matter what else is going on. Is any of them tripped?',
     options:[['no','No — None Tripped'],['yes','Yes — One or More Tripped']] },
   { type:'checkpoint', id:'chk_waterSwitch', phase:'electrical', check:'waterSwitch' },
   { type:'intro', phase:'electrical', title:'Electrical — checked first, per EAR', desc:'Electrical problems can cause misleading airflow and refrigerant symptoms downstream, which is why this comes first. Got the data plate handy? Scan it below to autofill rated values — or tap Continue to skip that and enter everything by hand.', scanBtn:true },
-  { type:'field', id:'voltage', phase:'electrical', group:'OUTDOOR UNIT — DISCONNECT', groupClass:'grp-elec' },
-  { type:'field', id:'ratedVoltage', phase:'electrical', group:'OUTDOOR UNIT — DISCONNECT', groupClass:'grp-elec' },
-  { type:'field', id:'ratedVoltageHigh', phase:'electrical', group:'OUTDOOR UNIT — DISCONNECT', groupClass:'grp-elec' },
+  { type:'field', ids:['voltage','ratedVoltage','ratedVoltageHigh'], phase:'electrical', group:'OUTDOOR UNIT — DISCONNECT', groupClass:'grp-elec' },
   { type:'checkpoint', id:'chk_voltage', phase:'electrical', check:'voltage' },
-  { type:'field', id:'compAmp', phase:'electrical', group:'COMPRESSOR', groupClass:'grp-elec' },
-  { type:'field', id:'compRLA', phase:'electrical', group:'COMPRESSOR', groupClass:'grp-elec' },
+  { type:'field', ids:['compAmp','compRLA'], phase:'electrical', group:'COMPRESSOR', groupClass:'grp-elec' },
   { type:'checkpoint', id:'chk_ampComp', phase:'electrical', check:'ampComp' },
-  { type:'field', id:'fanAmp', phase:'electrical', group:'CONDENSER FAN', groupClass:'grp-elec' },
-  { type:'field', id:'fanFLA', phase:'electrical', group:'CONDENSER FAN', groupClass:'grp-elec' },
+  { type:'field', ids:['fanAmp','fanFLA'], phase:'electrical', group:'CONDENSER FAN', groupClass:'grp-elec' },
   { type:'checkpoint', id:'chk_ampFan', phase:'electrical', check:'ampFan' },
   { type:'field', id:'capTolerance', phase:'electrical' },
   { type:'select', id:'fanMotorType', phase:'electrical', title:'Condenser Fan Motor', desc:'Does the condenser fan run off a capacitor, or is it board-driven (ECM / variable speed) with no capacitor at all?',
     options:[['cap','Capacitor-Driven'],['ecm','Board-Driven (ECM) — No Capacitor']] },
-  { type:'field', id:'capCompRated', phase:'electrical', group:'CAPACITOR — HERM SIDE', groupClass:'grp-elec' },
-  { type:'field', id:'capCompAmps', phase:'electrical', group:'CAPACITOR — HERM SIDE', groupClass:'grp-elec' },
-  { type:'field', id:'capCompVolts', phase:'electrical', group:'CAPACITOR — HERM SIDE', groupClass:'grp-elec' },
-  { type:'field', id:'capFanRated', phase:'electrical', group:'CAPACITOR — FAN SIDE', groupClass:'grp-elec', skipIf:()=> document.getElementById('fanMotorType').value === 'ecm' },
-  { type:'field', id:'capFanAmps', phase:'electrical', group:'CAPACITOR — FAN SIDE', groupClass:'grp-elec', skipIf:()=> document.getElementById('fanMotorType').value === 'ecm' },
-  { type:'field', id:'capFanVolts', phase:'electrical', group:'CAPACITOR — FAN SIDE', groupClass:'grp-elec', skipIf:()=> document.getElementById('fanMotorType').value === 'ecm' },
+  { type:'field', ids:['capCompRated','capCompAmps','capCompVolts'], phase:'electrical', group:'CAPACITOR — HERM SIDE', groupClass:'grp-elec' },
+  { type:'field', ids:['capFanRated','capFanAmps','capFanVolts'], phase:'electrical', group:'CAPACITOR — FAN SIDE', groupClass:'grp-elec', skipIf:()=> document.getElementById('fanMotorType').value === 'ecm' },
   { type:'checkpoint', id:'chk_cap', phase:'electrical', check:'capacitor' },
 
   { type:'intro', phase:'electrical', title:'Now the Indoor Side', desc:'Same idea, different unit — the outdoor checks are done, so let\'s cover the furnace/air handler before moving on to Airflow.' },
-  { type:'field', id:'indoorVoltage', phase:'electrical', group:'INDOOR UNIT — DISCONNECT', groupClass:'grp-elec' },
-  { type:'field', id:'indoorRatedVoltage', phase:'electrical', group:'INDOOR UNIT — DISCONNECT', groupClass:'grp-elec' },
-  { type:'field', id:'indoorRatedVoltageHigh', phase:'electrical', group:'INDOOR UNIT — DISCONNECT', groupClass:'grp-elec' },
+  { type:'field', ids:['indoorVoltage','indoorRatedVoltage','indoorRatedVoltageHigh'], phase:'electrical', group:'INDOOR UNIT — DISCONNECT', groupClass:'grp-elec' },
   { type:'checkpoint', id:'chk_voltageIndoor', phase:'electrical', check:'voltageIndoor' },
-  { type:'field', id:'blowerAmp', phase:'electrical', group:'BLOWER MOTOR', groupClass:'grp-elec' },
-  { type:'field', id:'blowerFLA', phase:'electrical', group:'BLOWER MOTOR', groupClass:'grp-elec' },
+  { type:'field', ids:['blowerAmp','blowerFLA'], phase:'electrical', group:'BLOWER MOTOR', groupClass:'grp-elec' },
   { type:'checkpoint', id:'chk_ampBlower', phase:'electrical', check:'ampBlower' },
   { type:'select', id:'blowerMotorType', phase:'electrical', title:'Indoor Blower Motor', desc:'Does the blower run off a capacitor, or is it board-driven (ECM / variable speed) with no capacitor at all?',
     options:[['cap','Capacitor-Driven'],['ecm','Board-Driven (ECM) — No Capacitor']] },
-  { type:'field', id:'blowerCapRated', phase:'electrical', group:'BLOWER CAPACITOR', groupClass:'grp-elec', skipIf:()=> document.getElementById('blowerMotorType').value === 'ecm' },
-  { type:'field', id:'blowerCapAmps', phase:'electrical', group:'BLOWER CAPACITOR', groupClass:'grp-elec', skipIf:()=> document.getElementById('blowerMotorType').value === 'ecm' },
-  { type:'field', id:'blowerCapVolts', phase:'electrical', group:'BLOWER CAPACITOR', groupClass:'grp-elec', skipIf:()=> document.getElementById('blowerMotorType').value === 'ecm' },
+  { type:'field', ids:['blowerCapRated','blowerCapAmps','blowerCapVolts'], phase:'electrical', group:'BLOWER CAPACITOR', groupClass:'grp-elec', skipIf:()=> document.getElementById('blowerMotorType').value === 'ecm' },
   { type:'checkpoint', id:'chk_capBlower', phase:'electrical', check:'capacitorBlower' },
 
   { type:'intro', phase:'airflow', title:'Airflow — second, per EAR', desc:'Refrigerant readings only mean what they\'re supposed to mean once airflow across the coil is confirmed correct — that\'s why this comes before Refrigerant.' },
   { type:'select', id:'filterVerified', phase:'airflow', title:'Filter Check', desc:'A dirty filter is the single most common cause of airflow problems, and it skews every other airflow reading you\'re about to take. Have you verified every filter — return grille, filter rack, etc. — is actually clean?',
     options:[['yes','Yes — Verified Clean'],['no','No — Not Checked Yet']], linksToQuestion:'af_filter' },
   { type:'field', id:'ambient', phase:'airflow' },
-  { type:'field', id:'targetStatic', phase:'airflow' },
-  { type:'field', id:'supStatic', phase:'airflow', group:'SUPPLY', groupClass:'grp-supply' },
-  { type:'field', id:'retStatic', phase:'airflow', group:'RETURN', groupClass:'grp-return' },
+  { type:'field', ids:['targetStatic','supStatic','retStatic'], phase:'airflow', group:'STATIC PRESSURE', groupClass:'grp-supply' },
   { type:'checkpoint', id:'chk_static', phase:'airflow', check:'static' },
   { type:'intro', phase:'airflow', title:'Air Side Readings', desc:'Got a Job Link Air Side screenshot? Scan it below to autofill these — or tap Continue to skip that and enter them by hand.', jobLinkBtn:true },
-  { type:'field', id:'retDB', phase:'airflow', group:'RETURN', groupClass:'grp-return' },
-  { type:'field', id:'retWB', phase:'airflow', group:'RETURN', groupClass:'grp-return' },
-  { type:'field', id:'retRH', phase:'airflow', group:'RETURN', groupClass:'grp-return' },
-  { type:'field', id:'retDP', phase:'airflow', group:'RETURN', groupClass:'grp-return' },
-  { type:'field', id:'retEnth', phase:'airflow', group:'RETURN', groupClass:'grp-return' },
-  { type:'field', id:'supDB', phase:'airflow', group:'SUPPLY', groupClass:'grp-supply' },
-  { type:'field', id:'supWB', phase:'airflow', group:'SUPPLY', groupClass:'grp-supply' },
-  { type:'field', id:'supRH', phase:'airflow', group:'SUPPLY', groupClass:'grp-supply' },
-  { type:'field', id:'supDP', phase:'airflow', group:'SUPPLY', groupClass:'grp-supply' },
-  { type:'field', id:'supEnth', phase:'airflow', group:'SUPPLY', groupClass:'grp-supply' },
+  { type:'field', ids:['retDB','retWB','retRH','retDP','retEnth'], phase:'airflow', group:'RETURN', groupClass:'grp-return' },
+  { type:'field', ids:['supDB','supWB','supRH','supDP','supEnth'], phase:'airflow', group:'SUPPLY', groupClass:'grp-supply' },
   { type:'checkpoint', id:'chk_airside', phase:'airflow', check:'airside' },
 
   { type:'intro', phase:'refrigerant', title:'Refrigerant — last, per EAR', desc:'With electrical and airflow already checked, these readings will actually mean what they\'re supposed to. Got a Job Link Refrigerant Side screenshot? Scan it below — or tap Continue to skip that and enter them by hand.', jobLinkBtn:true },
-  { type:'field', id:'targetSH', phase:'refrigerant' },
-  { type:'field', id:'targetSC', phase:'refrigerant' },
-  { type:'field', id:'suctionP', phase:'refrigerant', group:'SUCTION — LOW SIDE', groupClass:'grp-suction' },
-  { type:'field', id:'suctionT', phase:'refrigerant', group:'SUCTION — LOW SIDE', groupClass:'grp-suction' },
-  { type:'field', id:'vaporSat', phase:'refrigerant', group:'SUCTION — LOW SIDE', groupClass:'grp-suction' },
-  { type:'field', id:'actualSH', phase:'refrigerant' },
-  { type:'field', id:'liquidP', phase:'refrigerant', group:'LIQUID — HIGH SIDE', groupClass:'grp-liquid' },
-  { type:'field', id:'liquidT', phase:'refrigerant', group:'LIQUID — HIGH SIDE', groupClass:'grp-liquid' },
-  { type:'field', id:'liquidSat', phase:'refrigerant', group:'LIQUID — HIGH SIDE', groupClass:'grp-liquid' },
-  { type:'field', id:'actualSC', phase:'refrigerant' },
-  { type:'field', id:'dischargeP', phase:'refrigerant', group:'LIQUID — HIGH SIDE', groupClass:'grp-liquid' },
+  { type:'field', ids:['targetSH','targetSC'], phase:'refrigerant', group:'MANUFACTURER TARGETS', groupClass:'grp-elec' },
+  { type:'field', ids:['suctionP','suctionT','vaporSat','actualSH'], phase:'refrigerant', group:'SUCTION — LOW SIDE', groupClass:'grp-suction' },
+  { type:'field', ids:['liquidP','liquidT','liquidSat','actualSC','dischargeP'], phase:'refrigerant', group:'LIQUID — HIGH SIDE', groupClass:'grp-liquid' },
   { type:'checkpoint', id:'chk_charge', phase:'refrigerant', check:'charge' },
 ];
 
@@ -1469,10 +1440,13 @@ function wizResetMoved(){
   const home = wizHome();
   WIZ_STEPS.forEach(step=>{
     if (step.type !== 'field') return;
-    const input = document.getElementById(step.id);
-    if (!input) return;
-    const field = input.closest('.field');
-    if (field && field.parentElement !== home) home.appendChild(field);
+    const ids = step.ids || [step.id];
+    ids.forEach(fid=>{
+      const input = document.getElementById(fid);
+      if (!input) return;
+      const field = input.closest('.field');
+      if (field && field.parentElement !== home) home.appendChild(field);
+    });
   });
   const scanBtn = document.getElementById('scanBtn');
   if (scanBtn && scanBtn.parentElement !== home) home.appendChild(scanBtn);
@@ -1587,13 +1561,16 @@ function wizRenderStep(){
       groupTag.textContent = step.group;
       card.appendChild(groupTag);
     }
-    const input = document.getElementById(step.id);
-    if (!input) { console.error('QUICKDIAG: field element not found for step id', step.id); return; }
-    const field = input.closest('.field');
-    const slot = document.createElement('div');
-    slot.className = 'wiz-field-slot';
-    if (field) slot.appendChild(field); else console.error('QUICKDIAG: .field wrapper not found for', step.id);
-    card.appendChild(slot);
+    const ids = step.ids || [step.id];
+    ids.forEach(fid=>{
+      const input = document.getElementById(fid);
+      if (!input) { console.error('QUICKDIAG: field element not found for step id', fid); return; }
+      const field = input.closest('.field');
+      const slot = document.createElement('div');
+      slot.className = 'wiz-field-slot';
+      if (field) slot.appendChild(field); else console.error('QUICKDIAG: .field wrapper not found for', fid);
+      card.appendChild(slot);
+    });
   }
 
   else if (step.type === 'checkpoint'){
@@ -1725,26 +1702,30 @@ function wizRenderReview(){
       html += '<div class="wiz-review-phase">' + WIZ_PHASE_LABEL[step.phase] + '</div>';
       lastPhase = step.phase;
     }
-    const el = document.getElementById(step.id);
-    const field = el.closest('.field');
-    const labelEl = field ? field.querySelector('label') : null;
-    // Read the label's full text (which includes the "?" info-button's own
-    // text once initFieldGuide has run) and strip that trailing character,
-    // rather than assuming which child node is the label's own text — the
-    // exact node order/count there isn't something this code should have
-    // to depend on.
-    const label = labelEl ? (labelEl.textContent || '').replace(/\?\s*$/, '').trim() : (step.title || step.id);
-    let display;
-    if (step.type === 'select'){
-      const opt = step.options.find(o=>o[0]===el.value);
-      display = opt ? opt[1] : (el.value === 'unanswered' ? null : el.value);
-    } else {
-      display = el.value !== '' ? el.value : null;
-    }
-    html += '<div class="wiz-review-row" data-idx="' + idx + '">'
-      + '<span class="rv-label">' + label + '</span>'
-      + '<span class="rv-value' + (display===null?' empty':'') + '">' + (display===null?'not entered':display) + '</span>'
-      + '</div>';
+    const fieldIds = step.type === 'field' ? (step.ids || [step.id]) : [step.id];
+    fieldIds.forEach(fid=>{
+      const el = document.getElementById(fid);
+      if (!el) return;
+      const field = el.closest('.field');
+      const labelEl = field ? field.querySelector('label') : null;
+      // Read the label's full text (which includes the "?" info-button's own
+      // text once initFieldGuide has run) and strip that trailing character,
+      // rather than assuming which child node is the label's own text — the
+      // exact node order/count there isn't something this code should have
+      // to depend on.
+      const label = labelEl ? (labelEl.textContent || '').replace(/\?\s*$/, '').trim() : (step.title || fid);
+      let display;
+      if (step.type === 'select'){
+        const opt = step.options.find(o=>o[0]===el.value);
+        display = opt ? opt[1] : (el.value === 'unanswered' ? null : el.value);
+      } else {
+        display = el.value !== '' ? el.value : null;
+      }
+      html += '<div class="wiz-review-row" data-idx="' + idx + '">'
+        + '<span class="rv-label">' + label + '</span>'
+        + '<span class="rv-value' + (display===null?' empty':'') + '">' + (display===null?'not entered':display) + '</span>'
+        + '</div>';
+    });
   });
   list.innerHTML = html;
   list.addEventListener('click', (e)=>{
